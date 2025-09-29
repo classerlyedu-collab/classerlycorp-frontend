@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build",
-  "devCommand": "npm start",
-  "installCommand": "npm ci",
+    "buildCommand": "npm run build",
+    "devCommand": "npm start",
+    "installCommand": "npm ci",
     "framework": "create-react-app",
     "build": {
         "env": {
