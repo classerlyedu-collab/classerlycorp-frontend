@@ -1,8 +1,37 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-     "./src/**/*.{js,jsx,ts,tsx}",
+    "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  corePlugins: {
+    // Disable unused features to reduce bundle size
+    preflight: true,
+    container: false,
+    accessibility: false,
+    pointerEvents: false,
+    visibility: false,
+    position: true,
+    inset: true,
+    isolation: false,
+    zIndex: true,
+    order: false,
+    gridColumn: false,
+    gridColumnStart: false,
+    gridColumnEnd: false,
+    gridRow: false,
+    gridRowStart: false,
+    gridRowEnd: false,
+    float: false,
+    clear: false,
+    objectFit: true,
+    objectPosition: false,
+    overflow: true,
+    overscrollBehavior: false,
+    position: true,
+    inset: true,
+    visibility: false,
+    isolation: false,
+  },
   theme: {
     extend: {
       fontFamily: {
@@ -12,20 +41,20 @@ module.exports = {
       screens: {
         sm: '640px',
         // => @media (min-width: 640px) { ... }
-  
+
         md: '768px',
         // => @media (min-width: 768px) { ... }
-  
+
         lg: '1024px',
         // => @media (min-width: 1024px) { ... }
-  
+
         xl: '1280px',
         // => @media (min-width: 1280px) { ... }
-  
+
         '2xl': '1536px',
         // => @media (min-width: 1536px) { ... }
       },
-      colors:{
+      colors: {
         primary: '#A557F5',
         secondary: '#7102FF',
         inputBorder: '#BABCBC',
@@ -45,7 +74,7 @@ module.exports = {
         lightRed: '#FF4242',
         lightGreen: '#4BBDBD',
         lightPurple: '#9791D0',
-        lightGreen2:  '#219562',
+        lightGreen2: '#219562',
         label: '#737373',
         grey: '#8C8C8C',
         black: '#262626',
@@ -53,8 +82,8 @@ module.exports = {
         orangeBrown: '#F2994A',
         fadeBlue: '#4A51F2',
         lightPurple2: '#D1CFF7',
-        
-        
+
+
       },
     },
   },
