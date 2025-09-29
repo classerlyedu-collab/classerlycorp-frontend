@@ -1,0 +1,1 @@
+export { default as MyChildren } from './MyChildren';

@@ -1,0 +1,1 @@
+export {default as ClassProgress} from './ClassProgress';

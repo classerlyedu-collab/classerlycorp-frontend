@@ -1,0 +1,1 @@
+export { default as QuizConfirmation } from './QuizConfirmation';

@@ -1,0 +1,1 @@
+export {default as FeaturedCategoriesDailyQuiz} from './FeaturedCategories';

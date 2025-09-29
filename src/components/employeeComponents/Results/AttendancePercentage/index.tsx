@@ -1,0 +1,1 @@
+export {default as AttendancePercentage} from './AttendancePercentage';
