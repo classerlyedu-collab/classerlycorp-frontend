@@ -3,11 +3,6 @@
     "devCommand": "yarn start",
     "installCommand": "yarn install --frozen-lockfile",
     "framework": "create-react-app",
-    "functions": {
-        "app/api/**/*.js": {
-            "runtime": "nodejs18.x"
-        }
-    },
     "build": {
         "env": {
             "NODE_OPTIONS": "--max-old-space-size=4096",
