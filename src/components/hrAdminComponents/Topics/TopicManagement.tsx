@@ -117,7 +117,7 @@ const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNa
                 setEditingTopic(null);
                 setFormData({ name: '', subject: '', difficulty: 'Beginner', type: 'Standard' });
 
-                // Update local state instead of refetching
+                // Update local state with response data
                 if (editingTopic) {
                     setTopics(prev => prev.map(topic =>
                         topic._id === editingTopic._id
@@ -125,7 +125,12 @@ const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNa
                             : topic
                     ));
                 } else {
-                    setTopics(prev => [response.data, ...prev]);
+                    // For creating new topic, add the populated data from backend
+                    if (Array.isArray(response.data)) {
+                        setTopics(prev => [...response.data, ...prev]);
+                    } else if (response.data) {
+                        setTopics(prev => [response.data, ...prev]);
+                    }
                 }
             } else {
                 displayMessage(response.message, 'error');

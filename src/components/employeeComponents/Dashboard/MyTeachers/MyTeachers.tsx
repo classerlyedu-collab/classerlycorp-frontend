@@ -111,8 +111,8 @@ const MyTeachers: React.FC<MyTeachersProps> = ({ refreshTrigger }) => {
         showComments
       });
 
-      // Only track unread comments from HR-Admin to current Employee when comments modal is not open
-      if (commentData.userType === "HR-Admin" &&
+      // Track unread comments from HR-Admin or Instructor to current Employee when comments modal is not open
+      if ((commentData.userType === "HR-Admin" || commentData.userType === "Instructor") &&
         role === "Employee" &&
         !showComments &&
         commentData.recipient?._id === user._id) {
@@ -159,9 +159,13 @@ const MyTeachers: React.FC<MyTeachersProps> = ({ refreshTrigger }) => {
   }, [showComments, comments]);
 
   const getTeachers = () => {
+    // Existing endpoint returns HR-Admins managing this employee.
+    // Extend UI to treat Instructor-linked HRs the same, backend remains unchanged.
     Get("/employee/myteachers").then((d) => {
-      if (d.data?.length > 0) {
+      if (Array.isArray(d.data) && d.data.length > 0) {
         setmyTeachers(d.data);
+      } else {
+        setmyTeachers([]);
       }
     });
   };

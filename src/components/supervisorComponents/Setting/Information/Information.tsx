@@ -529,11 +529,11 @@ const Information = () => {
             </div>
           </div>
 
-          {/* Employee/Student Code */}
-          {(user.userType === "Student" || user.userType === "Employee") && (
+          {/* Employee/Student/Instructor Code */}
+          {(user.userType === "Student" || user.userType === "Employee" || user.userType === "Instructor") && (
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">
-                {user.userType === "Student" ? "Student Code" : "Employee Code"}
+                {user.userType === "Student" ? "Student Code" : user.userType === "Employee" ? "Employee Code" : "Instructor Code"}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

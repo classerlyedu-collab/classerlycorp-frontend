@@ -97,7 +97,8 @@ const Lessons = () => {
         if (user.userType !== "Parent") {
             localStorage.setItem("lesson", JSON.stringify(lesson));
             localStorage.setItem("lessonid", JSON.stringify(lesson._id));
-            navigate(`${RouteName?.MATERIAL_EMPLOYEE}?content=${lesson.content}`);
+            const contentType = lesson.contentType || 'google_docs';
+            navigate(`${RouteName?.MATERIAL_EMPLOYEE}?content=${lesson.content}&contentType=${contentType}`);
         }
     };
 

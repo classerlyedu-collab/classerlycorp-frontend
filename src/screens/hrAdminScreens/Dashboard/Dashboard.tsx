@@ -10,7 +10,8 @@ import {
     UpcomingEventsTeachers,
     Lessons,
     Schedule,
-    Notifications
+    Notifications,
+    Timeline
 } from "../../../components";
 import { UseStateContext } from "../../../context/ContextProvider";
 import { useSubscriptionStatus } from "../../../hooks/useSubscriptionStatus.hook";
@@ -19,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { RouteName } from "../../../routes/RouteNames";
 
 const Dashboard = () => {
-    const { dashboardRefreshTrigger } = UseStateContext();
+    const { dashboardRefreshTrigger, role } = UseStateContext();
     const navigate = useNavigate();
     const { loading, allowed } = useSubscriptionStatus();
 
@@ -56,9 +57,18 @@ const Dashboard = () => {
                         <AnalyticsComponent refreshTrigger={dashboardRefreshTrigger} />
                     </div>
 
-                    {/* notifications - takes 1/3 of the width */}
-                    <div className="lg:w-1/3 h-fit" >
+                    {/* right column - notifications and (if Instructor) requests */}
+                    <div className="lg:w-1/3 h-fit space-y-4" >
                         <Notifications maxNotifications={3} />
+                        {role === 'Instructor' && (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                                <div className="p-4 md:p-6">
+                                    <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Activity Timeline</h3>
+                                    {/* Reuse Timeline for accept/decline UI. For Instructors, endpoints are instructor-specific on backend; Timeline will work if we align endpoints later. */}
+                                    <Timeline />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                 </div>

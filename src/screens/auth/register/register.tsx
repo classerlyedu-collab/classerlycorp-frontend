@@ -23,7 +23,7 @@ const Register = () => {
   >("Signin");
 
   const [userRole, setUserRole] = useState<
-    "Supervisor" | "Employee" | "HR-Admin" | null
+    "Supervisor" | "Employee" | "HR-Admin" | "Instructor" | null
   >("Supervisor");
   const [forgotPasswordState, setForgotPasswordState] = useState<
     "Email" | "Pin" | "Password" | "Done"
@@ -128,6 +128,9 @@ const Register = () => {
                   case "HR-Admin":
                     navigate(RouteName?.DASHBOARD_SCREEN_HR_ADMIN);
                     break;
+                  case "Instructor":
+                    navigate(RouteName?.DASHBOARD_SCREEN_HR_ADMIN);
+                    break;
                   default:
                     navigate(RouteName?.DASHBOARD_SCREEN);
                     break;
@@ -205,6 +208,9 @@ const Register = () => {
                     navigate(RouteName?.DASHBOARD_SCREEN);
                     break;
                   case "HR-Admin":
+                    navigate(RouteName?.DASHBOARD_SCREEN_HR_ADMIN);
+                    break;
+                  case "Instructor":
                     navigate(RouteName?.DASHBOARD_SCREEN_HR_ADMIN);
                     break;
                   default:
@@ -314,9 +320,23 @@ const Register = () => {
         {/* Auth Card */}
         <div className="w-full mx-auto">
           <div className="bg-white border border-gray-200 rounded-2xl shadow-md p-5 md:p-6 lg:p-8 auth-card">
+            {/* Branding Header */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/classerly.net.png"
+                  alt="Classerly Logo"
+                  className="h-12 w-auto"
+                />
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  Classerly
+                </h1>
+              </div>
+            </div>
+
             {/* Form Heading */}
             <div className="mb-4 md:mb-5">
-              <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-900">
                 {screenStatus === 'Signin' && 'Welcome back'}
                 {screenStatus === 'Register' && 'Create your account'}
                 {screenStatus === 'Forgot' && (
@@ -324,7 +344,7 @@ const Register = () => {
                     forgotPasswordState === 'Pin' ? 'Verify code' :
                       forgotPasswordState === 'Password' ? 'Set new password' : 'All done'
                 )}
-              </h1>
+              </h2>
               <p className="mt-1 text-sm text-gray-600">
                 {screenStatus === 'Signin' && 'Sign in to continue to your dashboard.'}
                 {screenStatus === 'Register' && 'Fill in your details to get started with Classerly.'}

@@ -66,8 +66,8 @@ const ChooseLessons = () => {
               if (user.userType !== "Parent") {
                 localStorage.setItem("lesson", JSON.stringify(item))
                 localStorage.setItem("lessonid", JSON.stringify(item._id))
-
-                navigate(`${RouteName?.MATERIAL_EMPLOYEE}?content=${item.content}`)
+                const contentType = item.contentType || 'google_docs';
+                navigate(`${RouteName?.MATERIAL_EMPLOYEE}?content=${item.content}&contentType=${contentType}`)
               }
             }}
             className="cursor-pointer w-28 h-28 md:w-28 md:h-28 2xl:w-36 2xl:h-36 flex flex-col items-center justify-center rounded-xl flex-wrap"

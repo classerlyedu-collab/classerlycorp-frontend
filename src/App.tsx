@@ -27,6 +27,7 @@ const QuizConfirmation = lazy(() => import("./screens/employeeScreens/QuizConfir
 const SoloQuiz = lazy(() => import("./screens/employeeScreens/SoloQuiz").then(module => ({ default: module.SoloQuiz })));
 const QuizResult = lazy(() => import("./screens/employeeScreens/QuizResult").then(module => ({ default: module.QuizResult })));
 const EmployeeResultScreen = lazy(() => import("./screens/employeeScreens/Result").then(module => ({ default: module.StudentResult })));
+const Discussion = lazy(() => import("./screens/Discussion/Discussion"));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -168,6 +169,11 @@ function App() {
           <Route path={RouteName.CALENDAR_SCREEN} element={
             <ProtectedRoute>
               <Calendar />
+            </ProtectedRoute>
+          } />
+          <Route path={RouteName.DISCUSSION} element={
+            <ProtectedRoute>
+              <Discussion />
             </ProtectedRoute>
           } />
           <Route path={RouteName.SETTING_SCREEN} element={

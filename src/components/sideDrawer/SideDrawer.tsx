@@ -96,6 +96,11 @@ const SideDrawer = () => {
       route: RouteName.DASHBOARD_SCREEN,
     },
     {
+      icon: <RiFileList3Line className="mr-4 text-md md:text-base lg:text-2xl" />,
+      text: "Discussion",
+      route: RouteName.DISCUSSION,
+    },
+    {
       icon: <FaChildren className="mr-4 text-md md:text-base lg:text-2xl" />,
       text: "My Employees",
       route: RouteName.MYEMPLOYEES_SCREEN,
@@ -118,12 +123,19 @@ const SideDrawer = () => {
     // Removed coupon menu item - no longer needed
   ];
 
+  // Reused for HR-Admin and Instructor (subscription item hidden for Instructor)
   const teacherMenuItems: MenuItem[] = [
     {
       icon: <AiOutlineHome className="mr-4 text-md md:text-base lg:text-2xl" />,
       text: "Dashboard",
       route: RouteName.DASHBOARD_SCREEN_HR_ADMIN,
     },
+    {
+      icon: <RiFileList3Line className="mr-4 text-md md:text-base lg:text-2xl" />,
+      text: "Discussion",
+      route: RouteName.DISCUSSION_HR,
+    },
+    // Subscription kept for HR-Admin; will be hidden for Instructor below
     {
       icon: <MdOutlineSubscriptions className="mr-4 text-md md:text-base lg:text-2xl" />,
       text: "Subscription",
@@ -169,6 +181,11 @@ const SideDrawer = () => {
       route: RouteName.DASHBOARD_SCREEN_EMPLOYEE,
     },
     {
+      icon: <RiFileList3Line className="mr-4 text-md md:text-base lg:text-2xl" />,
+      text: "Discussion",
+      route: RouteName.DISCUSSION_EMP,
+    },
+    {
       icon: (
         <PiBooksDuotone className="mr-4 text-md md:text-base lg:text-2xl" />
       ),
@@ -205,6 +222,11 @@ const SideDrawer = () => {
         return studentMenuItems;
       case "HR-Admin":
         return teacherMenuItems;
+      case "Instructor": {
+        // Hide Subscription for Instructor
+        const filtered = teacherMenuItems.filter(mi => mi.route !== RouteName.SUBSCRIPTION);
+        return filtered;
+      }
       case "Supervisor":
         return parentMenuItems;
 
@@ -275,8 +297,8 @@ const SideDrawer = () => {
       />
 
       <div>
-        <h2
-          className="text-sm md:text-base lg:text-md p-4 font-ubuntu font-semibold text-gray-900 text-center cursor-pointer"
+        <div
+          className="flex items-center justify-center gap-3 p-4 cursor-pointer"
           onClick={() => {
             if (role === "Employee") {
               handleNavigate(studentMenuItems[0]?.route);
@@ -289,8 +311,15 @@ const SideDrawer = () => {
             }
           }}
         >
-          Classerly
-        </h2>
+          <img
+            src="/classerly.net.png"
+            alt="Classerly Logo"
+            className="h-8 w-auto"
+          />
+          <h2 className="text-sm md:text-base lg:text-md font-ubuntu font-semibold text-gray-900">
+            Classerly
+          </h2>
+        </div>
         <nav>
           <ul className="flex flex-col py-4">
             {getMenuItems()?.map((item, index) => {

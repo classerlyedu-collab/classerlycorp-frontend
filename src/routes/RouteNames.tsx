@@ -11,6 +11,7 @@ export const RouteName = {
     MYEMPLOYEES_SCREEN: '/MyEmployees',
     CALENDAR_SCREEN: '/Calendar',
     EMPLOYEE_RESULT_SCREEN: '/MyEmployees/Employee_Result',
+    DISCUSSION: '/Discussion',
 
     // HR-Admin
     DASHBOARD_SCREEN_HR_ADMIN: '/Dashboard_HR_Admin',
@@ -22,6 +23,7 @@ export const RouteName = {
     UPDATE_QUIZ: '/my_quizzes/update_quiz',
     MY_QUIZZES: '/my_quizzes',
     SUBJECT_TOPIC_MANAGEMENT: '/content-management',
+    DISCUSSION_HR: '/Discussion',
 
     // Employee
     DASHBOARD_SCREEN_EMPLOYEE: '/Dashboard_Employee',
@@ -42,5 +44,6 @@ export const RouteName = {
     MULTIPLAYER_QUIZ: '/Subjects/Daily_Quiz/Multiplayer_Quiz',
     QUIZ_CONFIRMATION: '/Subjects/Daily_Quiz/Confirmation',
     QUIZ_RESULT: '/Subjects/Daily_Quiz/Result',
+    DISCUSSION_EMP: '/Discussion',
 
 };

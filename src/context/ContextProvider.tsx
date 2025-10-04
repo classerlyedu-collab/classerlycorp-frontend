@@ -5,7 +5,7 @@ interface StateContextProps {
     setShowSideBar: any;
     loading: boolean;
     setLoading: any;
-    role: 'Supervisor' | 'Employee' | 'HR-Admin' | null;
+    role: 'Supervisor' | 'Employee' | 'HR-Admin' | 'Instructor' | null;
     setRole: any;
     hasChanges: boolean;
     setHasChanges: any;
@@ -42,7 +42,7 @@ export const ContextProvider: React.FC<{ children: React.ReactNode }> = (props) 
     };
 
     const [user, setUser] = useState<any>(getUserFromStorage());
-    const [role, setRole] = useState<'Supervisor' | 'Employee' | 'HR-Admin' | null>(user?.userType || null);
+    const [role, setRole] = useState<'Supervisor' | 'Employee' | 'HR-Admin' | 'Instructor' | null>(user?.userType || null);
     const [subscriptionAllowed, setSubscriptionAllowed] = useState<boolean>(false); // Default to false - secure by default
 
     // Function to update user data

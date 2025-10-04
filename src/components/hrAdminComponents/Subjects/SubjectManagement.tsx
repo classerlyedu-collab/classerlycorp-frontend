@@ -91,7 +91,7 @@ const SubjectManagement: React.FC<SubjectManagementProps> = ({ onNavigateToTopic
                 }
                 setPreviewUrl(null);
 
-                // Update local state instead of refetching
+                // Update local state with response data
                 if (editingSubject) {
                     setSubjects(prev => prev.map(subject =>
                         subject._id === editingSubject._id
@@ -99,7 +99,12 @@ const SubjectManagement: React.FC<SubjectManagementProps> = ({ onNavigateToTopic
                             : subject
                     ));
                 } else {
-                    setSubjects(prev => [response.data, ...prev]);
+                    // For creating new subject, add the populated data from backend
+                    if (Array.isArray(response.data)) {
+                        setSubjects(prev => [...response.data, ...prev]);
+                    } else if (response.data) {
+                        setSubjects(prev => [response.data, ...prev]);
+                    }
                 }
             } else {
                 displayMessage(response.message, 'error');

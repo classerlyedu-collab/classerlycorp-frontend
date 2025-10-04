@@ -19,7 +19,18 @@ import {
 interface Request {
     _id: string;
     status: 'Pending' | 'Complete' | 'Rejected';
-    employee: {
+    employee?: {
+        _id: string;
+        code: string;
+        auth: {
+            _id: string;
+            fullName: string;
+            email: string;
+            userName: string;
+            image?: string;
+        };
+    };
+    instructor?: {
         _id: string;
         code: string;
         auth: {
@@ -303,7 +314,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger })
                             <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                                 <BsPersonFill className="w-10 h-10 text-gray-400" />
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Employee Requests</h3>
+                            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Pending Requests</h3>
                             <p className="text-sm text-gray-500 max-w-sm mx-auto">
                                 When employees request to join your team, they will appear here for your review
                             </p>
@@ -322,8 +333,8 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger })
                                             <div className="relative">
                                                 <div className="w-10 h-10 md:w-14 md:h-14 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shadow-md">
                                                     <img
-                                                        src={request.employee.auth.image || require("../../../images/settings/profile.png")}
-                                                        alt={request.employee.auth.fullName}
+                                                        src={(request.employee?.auth?.image || request.instructor?.auth?.image) || require("../../../images/settings/profile.png")}
+                                                        alt={(request.employee?.auth?.fullName || request.instructor?.auth?.fullName || 'User') as string}
                                                         className="w-full h-full object-cover"
                                                     />
                                                 </div>
@@ -336,12 +347,12 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger })
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="text-base md:text-lg font-bold text-gray-900 truncate">
-                                                    {request.employee.auth.fullName || request.employee.auth.userName}
+                                                    {request.employee?.auth?.fullName || request.instructor?.auth?.fullName || request.employee?.auth?.userName || request.instructor?.auth?.userName || 'User'}
                                                 </h3>
-                                                <p className="text-xs md:text-sm text-gray-600 truncate">{request.employee.auth.email}</p>
+                                                <p className="text-xs md:text-sm text-gray-600 truncate">{request.employee?.auth?.email || request.instructor?.auth?.email || ''}</p>
                                                 <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
                                                     <BsTag className="w-3 h-3" />
-                                                    <span className="font-mono font-medium">ID: {request.employee.code}</span>
+                                                    <span className="font-mono font-medium">ID: {request.employee?.code || request.instructor?.code || 'N/A'}</span>
                                                 </div>
                                             </div>
                                         </div>

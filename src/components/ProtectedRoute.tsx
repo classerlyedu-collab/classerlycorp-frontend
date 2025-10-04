@@ -5,7 +5,7 @@ import { RouteName } from '../routes/RouteNames';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
-    requiredRole?: 'Supervisor' | 'Employee' | 'HR-Admin';
+    requiredRole?: 'Supervisor' | 'Employee' | 'HR-Admin' | 'Instructor';
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
@@ -40,14 +40,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
         return <Navigate to={RouteName.AUTH_SCREEN} state={{ from: location }} replace />;
     }
 
-    // If role is required and doesn't match, redirect to appropriate dashboard
-    if (requiredRole && role !== requiredRole) {
+    // If role is required and doesn't match, allow Instructor wherever HR-Admin is required; otherwise redirect
+    if (requiredRole && !(role === requiredRole || (requiredRole === 'HR-Admin' && role === 'Instructor'))) {
         switch (role) {
             case 'Supervisor':
                 return <Navigate to={RouteName.DASHBOARD_SCREEN} replace />;
             case 'Employee':
                 return <Navigate to={RouteName.DASHBOARD_SCREEN_EMPLOYEE} replace />;
             case 'HR-Admin':
+                return <Navigate to={RouteName.DASHBOARD_SCREEN_HR_ADMIN} replace />;
+            case 'Instructor':
                 return <Navigate to={RouteName.DASHBOARD_SCREEN_HR_ADMIN} replace />;
             default:
                 // If role is invalid or null, redirect to login

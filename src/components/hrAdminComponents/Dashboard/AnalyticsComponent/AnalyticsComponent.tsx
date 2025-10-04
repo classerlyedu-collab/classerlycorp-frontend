@@ -4,6 +4,7 @@ import { Get } from "../../../../config/apiMethods";
 import { FcManager, FcPodiumWithSpeaker, FcPuzzle, FcReading, FcRules } from "react-icons/fc";
 import { RouteName } from "../../../../routes/RouteNames";
 import { useNavigate } from "react-router-dom";
+import { UseStateContext } from "../../../../context/ContextProvider";
 
 interface AnalyticsComponentProps {
   refreshTrigger?: number;
@@ -11,6 +12,7 @@ interface AnalyticsComponentProps {
 
 const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger }) => {
   const navigate = useNavigate();
+  const { role } = UseStateContext();
   const teacherdata = [
     {
       label: 'Total Employees',
@@ -33,32 +35,20 @@ const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger 
       color: '#EA794A',
       RouteName: RouteName?.MY_QUIZZES
     },
-    // {
-    //   label: 'Total Games',
-    //   value: 0,
-    //   icon: <FcPuzzle className="text-5xl md:text-6xl lg:text-7xl" />,
-    //   color: '#63CB82',
-    //   RouteName: null
-    // },
-    // {
-    //     label: 'Total Classess',
-    //     value: 90,
-    //     icon: <FcPodiumWithSpeaker className="text-5xl md:text-6xl lg:text-7xl" />,
-    //     color: '#3BC6DF'
-    // },
   ]
   const [teacher, setTeacher] = useState<any[]>(
     []
   );
   useEffect(() => { }, [teacher])
   useEffect(() => {
-    Get("/hr-admin/dashboard")
+    const endpoint = role === 'Instructor' ? '/hr-admin/instructor/dashboard' : '/hr-admin/dashboard';
+    Get(endpoint)
       .then((d) => {
         if (d.success) {
 
           let data = [...teacherdata]
 
-          // Derive employees count robustly from various possible payload shapes
+          // Derive employees count robustly from payload shapes
           const rawEmployees =
             (typeof d.data?.employees !== 'undefined' ? d.data.employees :
               typeof d.data?.students !== 'undefined' ? d.data.students :
@@ -79,7 +69,7 @@ const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger 
       .catch((e) => {
         //   displayMessage(e.message);
       });
-  }, [refreshTrigger]);
+  }, [refreshTrigger, role]);
   return (
     <div className="w-full h-full">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">

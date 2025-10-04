@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Get, Put, Delete } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
+import { UseStateContext } from "../../../../context/ContextProvider";
 import {
   BsCheckCircle,
   BsXCircle,
@@ -15,6 +16,7 @@ interface TimelineProps {
 }
 
 const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
+  const { role } = UseStateContext();
   const [requests, setRequests] = useState<any[]>([])
   const [myTeachers, setmyTeachers] = useState<any[]>([])
   const [loadingRequests, setLoadingRequests] = useState(false)
@@ -22,7 +24,8 @@ const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
 
   const getrequest = () => {
     setLoadingRequests(true)
-    Get("/employee/myrequests").then((d) => {
+    const listUrl = role === 'Instructor' ? '/hr-admin/instructor/requests' : '/employee/myrequests';
+    Get(listUrl).then((d) => {
       if (d.data?.length > 0) {
         setRequests(d.data)
       } else {
@@ -51,7 +54,8 @@ const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
 
   const updateRequest = (id: any, status: any) => {
     setProcessingRequest(id)
-    Put(`/employee/request/${id}`, { status }).then((d) => {
+    const updateUrl = role === 'Instructor' ? `/hr-admin/instructor/requests/${id}` : `/employee/request/${id}`;
+    Put(updateUrl, { status }).then((d) => {
       if (d.success) {
         displayMessage(d.message, "success")
         // If the request was accepted (status = "Complete"), trigger the callback to refresh My Team
@@ -71,7 +75,8 @@ const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
 
   const deleteRequest = (id: any) => {
     setProcessingRequest(id)
-    Delete(`/employee/request/${id}`).then((d) => {
+    const deleteUrl = role === 'Instructor' ? `/hr-admin/requests/${id}/delete` : `/employee/request/${id}`;
+    Delete(deleteUrl).then((d) => {
       if (d.success) {
         displayMessage("Request deleted successfully", "success")
       } else {
@@ -127,12 +132,12 @@ const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
                 }`}>
                 {/* Top Section with Avatar, Request Details, and Status Tag */}
                 <div className="flex items-start space-x-3">
-                  {/* HR Admin Avatar */}
+                  {/* HR Admin or Instructor Avatar */}
                   <div className="flex-shrink-0">
-                    {item?.hrAdmin?.auth?.image ? (
+                    {(item?.instructor?.auth?.image || item?.hrAdmin?.auth?.image) ? (
                       <img
-                        src={item.hrAdmin.auth.image}
-                        alt={item?.hrAdmin?.auth?.userName || 'HR Admin'}
+                        src={item?.instructor?.auth?.image || item?.hrAdmin?.auth?.image}
+                        alt={(item?.instructor?.auth?.userName || item?.hrAdmin?.auth?.userName) || 'User'}
                         className={`w-8 h-8 rounded-full object-cover border ${item.status === "Rejected"
                           ? "border-slate-300"
                           : "border-blue-200"
@@ -144,7 +149,7 @@ const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
                         : "bg-gradient-to-br from-blue-500 to-blue-600 border-blue-200 text-white"
                         }`}>
                         <span className="font-semibold text-xs">
-                          {item?.hrAdmin?.auth?.userName?.charAt(0).toUpperCase() || 'H'}
+                          {(item?.instructor?.auth?.userName?.charAt(0).toUpperCase()) || (item?.hrAdmin?.auth?.userName?.charAt(0).toUpperCase()) || 'U'}
                         </span>
                       </div>
                     )}
@@ -159,10 +164,12 @@ const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
                       <span className={`font-semibold ${item.status === "Rejected"
                         ? "text-slate-600"
                         : "text-blue-600"
-                        }`}>{item?.hrAdmin?.auth?.userName}</span>
-                      {item.status === "Rejected"
-                        ? " request was declined"
-                        : " invited you"
+                        }`}>
+                        {item?.instructor?.auth?.userName || item?.hrAdmin?.auth?.userName}
+                      </span>
+                      {item?.instructor
+                        ? (item.status === "Rejected" ? " (Instructor) request was declined" : " (Instructor) invited you")
+                        : (item.status === "Rejected" ? " request was declined" : " invited you")
                       }
                     </p>
                   </div>

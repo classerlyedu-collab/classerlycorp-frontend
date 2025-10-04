@@ -33,6 +33,7 @@ interface Comment {
 
 export const MyEmployees = () => {
   const [mystd, setMyStd] = useState<any[]>([]);
+  const [instructors, setInstructors] = useState<any[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [newComment, setNewComment] = useState("");
@@ -45,6 +46,9 @@ export const MyEmployees = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showInstructorDeleteModal, setShowInstructorDeleteModal] = useState(false);
+  const [instructorToDelete, setInstructorToDelete] = useState<any>(null);
+  const [isDeletingInstructor, setIsDeletingInstructor] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [userPresence, setUserPresence] = useState<Record<string, 'online' | 'away' | 'offline'>>({});
@@ -134,9 +138,9 @@ export const MyEmployees = () => {
         showComments
       });
 
-      // Only track unread comments from Employee to current HR-Admin when comments modal is not open
+      // Track unread comments from Employee to current HR-Admin OR Instructor when comments modal is not open
       if (commentData.userType === "Employee" &&
-        role === "HR-Admin" &&
+        (role === "HR-Admin" || role === "Instructor") &&
         !showComments &&
         commentData.recipient?._id === user._id) {
         const senderId = commentData.user?._id;
@@ -222,7 +226,14 @@ export const MyEmployees = () => {
     Get("/hr-admin/myemployees")
       .then((d) => {
         if (d.success) {
-          setMyStd(d.data);
+          // Support both legacy array and new object shape { employees, instructors }
+          if (Array.isArray(d.data)) {
+            setMyStd(d.data);
+            setInstructors([]);
+          } else {
+            setMyStd(d.data?.employees || []);
+            setInstructors(d.data?.instructors || []);
+          }
         } else {
           displayMessage(d.message, "error");
         }
@@ -368,6 +379,33 @@ export const MyEmployees = () => {
     setEmployeeToDelete(null);
   };
 
+  const handleConfirmDeleteInstructor = async () => {
+    if (!instructorToDelete) return;
+
+    setIsDeletingInstructor(true);
+    try {
+      const response = await Delete(`/hr-admin/instructor/${instructorToDelete._id}`);
+      if (response.success) {
+        displayMessage(response.message || "Instructor removed successfully from your team", "success");
+        // Remove instructor from the list
+        setInstructors(prev => prev.filter(ins => ins._id !== instructorToDelete._id));
+        setShowInstructorDeleteModal(false);
+        setInstructorToDelete(null);
+      } else {
+        displayMessage(response.message || "Failed to remove instructor", "error");
+      }
+    } catch (error) {
+      displayMessage("Failed to remove instructor", "error");
+    } finally {
+      setIsDeletingInstructor(false);
+    }
+  };
+
+  const handleCancelDeleteInstructor = () => {
+    setShowInstructorDeleteModal(false);
+    setInstructorToDelete(null);
+  };
+
   // Subject assignment handlers
   const handleOpenSubjectAssignment = async (employee: any) => {
     setSelectedEmployeeForSubjects(employee);
@@ -412,7 +450,13 @@ export const MyEmployees = () => {
         // Refresh the employees list
         const refreshResponse = await Get("/hr-admin/myemployees");
         if (refreshResponse.success) {
-          setMyStd(refreshResponse.data);
+          if (Array.isArray(refreshResponse.data)) {
+            setMyStd(refreshResponse.data);
+            setInstructors([]);
+          } else {
+            setMyStd(refreshResponse.data?.employees || []);
+            setInstructors(refreshResponse.data?.instructors || []);
+          }
         }
       } else {
         displayMessage(response.message || "Failed to assign subjects", "error");
@@ -648,6 +692,66 @@ export const MyEmployees = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Instructors Section */}
+        {role === "HR-Admin" && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-ubuntu font-semibold text-gray-900">Instructors</h2>
+            </div>
+            {isInitialLoading ? (
+              <div className="flex items-center justify-center h-40 md:h-48 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
+                <div className="text-center px-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-700 font-ubuntu font-medium">Loading instructors...</p>
+                </div>
+              </div>
+            ) : (!instructors || instructors.length === 0) ? (
+              <div className="flex items-center justify-center h-32 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
+                <div className="text-center px-4">
+                  <p className="text-gray-700 font-ubuntu font-medium">No instructors yet</p>
+                  <p className="text-gray-500 text-sm mt-1">Once added, instructors will appear here</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-8">
+                {instructors.map((ins) => (
+                  <div key={ins._id} className="group bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden hover:border-blue-300 flex flex-col">
+                    <div className="bg-gradient-to-br from-purple-50 to-violet-50 border-b border-gray-100 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 rounded-full border-2 border-white shadow-sm overflow-hidden bg-white">
+                            <img className="w-full h-full object-cover" src={ins?.auth?.image || StudentsData[0].image} alt="Instructor Avatar" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-gray-900 text-sm md:text-base truncate">{ins?.auth?.fullName}</h3>
+                            <p className="text-xs text-gray-500">Instructor</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setInstructorToDelete(ins);
+                            setShowInstructorDeleteModal(true);
+                          }}
+                          disabled={isDeletingInstructor}
+                          className="p-1.5 rounded-lg hover:bg-white/70 transition-colors text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Remove Instructor"
+                        >
+                          {isDeletingInstructor ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          )}
+                        </button>
+                      </div>
+                      <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-medium">ID: {ins?.code}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -969,6 +1073,83 @@ export const MyEmployees = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                     {selectedSubjects.length === 0 ? 'Remove All Subjects' : `Update Subjects (${selectedSubjects.length})`}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instructor Delete Confirmation Modal */}
+      {showInstructorDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Remove Instructor</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCancelDeleteInstructor}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <IoClose className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg">
+                  {instructorToDelete?.auth?.fullName?.charAt(0) || 'I'}
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">{instructorToDelete?.auth?.fullName}</h4>
+                  <p className="text-sm text-gray-500">Instructor • ID: {instructorToDelete?.code}</p>
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Are you sure you want to remove this instructor from your team? They will lose access to all subjects, employees, and content under your management.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={handleCancelDeleteInstructor}
+                disabled={isDeletingInstructor}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteInstructor}
+                disabled={isDeletingInstructor}
+                className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${isDeletingInstructor
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl'
+                  }`}
+              >
+                {isDeletingInstructor ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Removing...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Remove Instructor
                   </>
                 )}
               </button>

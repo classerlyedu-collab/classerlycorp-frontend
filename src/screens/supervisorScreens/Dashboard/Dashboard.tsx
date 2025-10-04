@@ -46,9 +46,9 @@ const Dashboard = () => {
               </div>
 
               {/* Dashboard Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left Column - Main Content */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-1 space-y-6">
                   {/* Team Overview */}
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                     <div className="p-6">

@@ -319,7 +319,7 @@ const Calendar = () => {
                                     Agenda
                                 </button>
                             </div>
-                            {(role === "HR-Admin" || role === "Supervisor" || role === "Employee") && (
+                            {(role === "HR-Admin" || role === "Supervisor" || role === "Employee" || role === "Instructor") && (
                                 <button
                                     onClick={handleAddEvent}
                                     className="inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold text-xs sm:text-sm w-full sm:w-auto"

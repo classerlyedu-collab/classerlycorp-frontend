@@ -25,7 +25,8 @@ interface Topic {
 interface Lesson {
     _id: string;
     name: string;
-    content: string; // Google Docs URL
+    content: string; // Google Docs URL or YouTube URL
+    contentType: 'google_docs' | 'youtube';
     pages: number;
     words: number;
     lang: string;
@@ -52,7 +53,8 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const [formData, setFormData] = useState({
         name: '',
-        content: '', // Google Docs URL
+        content: '', // Google Docs URL or YouTube URL
+        contentType: 'google_docs' as 'google_docs' | 'youtube',
         lang: 'Eng'
     });
 
@@ -86,13 +88,18 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
         e.preventDefault();
 
         if (!formData.name.trim() || !formData.content.trim() || !selectedTopic) {
-            displayMessage('Please provide lesson name and a valid Google Docs URL', 'error');
+            displayMessage('Please provide lesson name and content URL', 'error');
             return;
         }
 
-        // Validate Google Docs URL
-        if (!formData.content.includes('docs.google.com')) {
+        // Validate URL based on content type
+        if (formData.contentType === 'google_docs' && !formData.content.includes('docs.google.com')) {
             displayMessage('Please provide a valid Google Docs URL', 'error');
+            return;
+        }
+
+        if (formData.contentType === 'youtube' && !formData.content.includes('youtube.com') && !formData.content.includes('youtu.be')) {
+            displayMessage('Please provide a valid YouTube URL', 'error');
             return;
         }
 
@@ -101,6 +108,7 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
             const payload = {
                 name: formData.name.trim(),
                 content: formData.content.trim(),
+                contentType: formData.contentType,
                 lang: formData.lang,
                 topic: selectedTopic._id
             };
@@ -119,9 +127,9 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                 );
                 setShowModal(false);
                 setEditingLesson(null);
-                setFormData({ name: '', content: '', lang: 'Eng' });
+                setFormData({ name: '', content: '', contentType: 'google_docs', lang: 'Eng' });
 
-                // Update local state instead of refetching
+                // Update local state with response data
                 if (editingLesson) {
                     const updated = response.data ?? null;
                     if (updated) {
@@ -132,7 +140,12 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                         setLessons(prev => prev);
                     }
                 } else {
-                    setLessons(prev => [response.data, ...prev]);
+                    // For creating new lesson, add the populated data from backend
+                    if (Array.isArray(response.data)) {
+                        setLessons(prev => [...response.data, ...prev]);
+                    } else if (response.data) {
+                        setLessons(prev => [response.data, ...prev]);
+                    }
                 }
             } else {
                 displayMessage(response.message, 'error');
@@ -149,13 +162,14 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
         setFormData({
             name: lesson.name,
             content: lesson.content,
+            contentType: lesson.contentType || 'google_docs',
             lang: lesson.lang
         });
         setShowModal(true);
     };
 
     const handleOpenModal = () => {
-        setFormData({ name: '', content: '', lang: 'Eng' });
+        setFormData({ name: '', content: '', contentType: 'google_docs', lang: 'Eng' });
         setEditingLesson(null);
         setShowModal(true);
     };
@@ -163,7 +177,7 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingLesson(null);
-        setFormData({ name: '', content: '', lang: 'Eng' });
+        setFormData({ name: '', content: '', contentType: 'google_docs', lang: 'Eng' });
     };
 
     const handleDeleteClick = (lesson: Lesson) => {
@@ -212,7 +226,24 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
         setSelectedLessonForView(null);
     };
 
-    const convertToEmbedUrl = (url: string) => {
+    const convertToEmbedUrl = (url: string, contentType?: string) => {
+        // Handle YouTube URLs
+        if (contentType === 'youtube' || url.includes('youtube.com') || url.includes('youtu.be')) {
+            let videoId = '';
+
+            if (url.includes('youtube.com/watch?v=')) {
+                videoId = url.split('v=')[1].split('&')[0];
+            } else if (url.includes('youtu.be/')) {
+                videoId = url.split('youtu.be/')[1].split('?')[0];
+            } else if (url.includes('youtube.com/embed/')) {
+                return url; // Already in embed format
+            }
+
+            if (videoId) {
+                return `https://www.youtube.com/embed/${videoId}`;
+            }
+        }
+
         // Convert Google Docs URL to embeddable format
         if (url.includes('/document/d/')) {
             const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
@@ -220,6 +251,7 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                 return `https://docs.google.com/document/d/${match[1]}/preview`;
             }
         }
+
         return url;
     };
 
@@ -397,19 +429,39 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Google Docs URL
+                                        Content Type
+                                    </label>
+                                    <select
+                                        value={formData.contentType}
+                                        onChange={(e) => setFormData({ ...formData, contentType: e.target.value as 'google_docs' | 'youtube' })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        disabled={isSubmitting}
+                                    >
+                                        <option value="google_docs">Google Docs</option>
+                                        <option value="youtube">YouTube Video</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        {formData.contentType === 'google_docs' ? 'Google Docs URL' :
+                                            formData.contentType === 'youtube' ? 'YouTube URL' : 'Content URL'}
                                     </label>
                                     <input
                                         type="url"
                                         value={formData.content}
                                         onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="https://docs.google.com/document/d/..."
+                                        placeholder={
+                                            formData.contentType === 'google_docs' ? 'https://docs.google.com/document/d/...' :
+                                                'https://www.youtube.com/watch?v=... or https://youtu.be/...'
+                                        }
                                         disabled={isSubmitting}
                                         required
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Paste the Google Docs URL here. Make sure the document is publicly accessible.
+                                        {formData.contentType === 'google_docs' ? 'Paste the Google Docs URL here. Make sure the document is publicly accessible.' :
+                                            'Paste the YouTube video URL here. Supports youtube.com and youtu.be formats.'}
                                     </p>
                                 </div>
 
@@ -494,10 +546,11 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                         <div className="flex-1 p-6">
                             {selectedLessonForView.content ? (
                                 <iframe
-                                    src={convertToEmbedUrl(selectedLessonForView.content)}
+                                    src={convertToEmbedUrl(selectedLessonForView.content, selectedLessonForView.contentType)}
                                     className="w-full h-full border-0 rounded-lg"
                                     title={selectedLessonForView.name || 'Lesson Content'}
                                     allowFullScreen
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 />
                             ) : (
                                 <div className="flex items-center justify-center h-full text-gray-500">

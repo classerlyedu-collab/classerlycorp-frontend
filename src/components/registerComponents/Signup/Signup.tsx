@@ -135,6 +135,14 @@ const Signup = ({
                         error={roleError}
                         setError={setRoleError}
                     />
+                    <CustomRadio
+                        value={role}
+                        setValue={setRole}
+                        name="Instructor"
+                        label="Instructor"
+                        error={roleError}
+                        setError={setRoleError}
+                    />
                 </div>
 
 
