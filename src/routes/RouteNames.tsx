@@ -19,6 +19,8 @@ export const RouteName = {
     COURSES_SCREEN: '/Courses',
     EMPLOYEES_SCREEN: '/Employees',
     EMPLOYEE_DETAILS_SCREEN: '/Employees/Employee_Details',
+    SUPERVISORS_SCREEN: '/Supervisors',
+    INSTRUCTORS_SCREEN: '/Instructors',
     ADD_QUIZ: '/my_quizzes/add_quiz',
     UPDATE_QUIZ: '/my_quizzes/update_quiz',
     MY_QUIZZES: '/my_quizzes',

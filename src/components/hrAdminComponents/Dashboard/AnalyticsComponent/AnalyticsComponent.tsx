@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { TeacherAnalyticsData } from "../../../../constants/HRAdmin/Dashboard";
 import { Get } from "../../../../config/apiMethods";
 import { FcManager, FcPodiumWithSpeaker, FcPuzzle, FcReading, FcRules } from "react-icons/fc";
+import { PiStudentFill } from "react-icons/pi";
+import { MdOutlineSchool } from "react-icons/md";
 import { RouteName } from "../../../../routes/RouteNames";
 import { useNavigate } from "react-router-dom";
 import { UseStateContext } from "../../../../context/ContextProvider";
@@ -20,6 +22,21 @@ const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger 
       icon: <FcManager className="text-5xl md:text-6xl lg:text-7xl" />,
       color: '#7F49F2',
       RouteName: RouteName?.EMPLOYEES_SCREEN
+    },
+    {
+      label: 'Total Supervisors',
+      value: 0,
+      icon: <PiStudentFill className="text-5xl md:text-6xl lg:text-7xl text-blue-600" />,
+      color: '#4CAF50',
+      RouteName: RouteName?.SUPERVISORS_SCREEN
+    },
+    {
+      label: 'Total Instructors',
+      value: 0,
+      icon: <MdOutlineSchool className="text-5xl md:text-6xl lg:text-7xl text-purple-600" />,
+      color: '#8B5CF6',
+      RouteName: RouteName?.INSTRUCTORS_SCREEN,
+      roleRestriction: 'HR-Admin' // Only show for HR-Admin
     },
     {
       label: 'Total Subjects',
@@ -45,8 +62,10 @@ const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger 
     Get(endpoint)
       .then((d) => {
         if (d.success) {
-
-          let data = [...teacherdata]
+          // Filter data based on role - remove instructor card for Instructor role
+          let data = [...teacherdata].filter(item =>
+            !item.roleRestriction || item.roleRestriction === role
+          );
 
           // Derive employees count robustly from payload shapes
           const rawEmployees =
@@ -59,9 +78,18 @@ const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger 
             ? rawEmployees.length
             : Number(rawEmployees) || 0;
 
-          data[0].value = employeesCount;
-          data[1].value = Number(d.data?.subject) || (Array.isArray(d.data?.subject) ? d.data.subject.length : 0);
-          data[2].value = Number(d.data?.quizes) || (Array.isArray(d.data?.quizes) ? d.data.quizes.length : 0);
+          // Map the data based on the filtered array
+          const employeesIndex = data.findIndex(item => item.label === 'Total Employees');
+          const supervisorsIndex = data.findIndex(item => item.label === 'Total Supervisors');
+          const instructorsIndex = data.findIndex(item => item.label === 'Total Instructors');
+          const subjectsIndex = data.findIndex(item => item.label === 'Total Subjects');
+          const quizzesIndex = data.findIndex(item => item.label === 'Total Quizzes');
+
+          if (employeesIndex !== -1) data[employeesIndex].value = employeesCount;
+          if (supervisorsIndex !== -1) data[supervisorsIndex].value = Number(d.data?.supervisors) || 0;
+          if (instructorsIndex !== -1) data[instructorsIndex].value = Number(d.data?.instructors) || 0;
+          if (subjectsIndex !== -1) data[subjectsIndex].value = Number(d.data?.subject) || (Array.isArray(d.data?.subject) ? d.data.subject.length : 0);
+          if (quizzesIndex !== -1) data[quizzesIndex].value = Number(d.data?.quizes) || (Array.isArray(d.data?.quizes) ? d.data.quizes.length : 0);
 
           setTeacher(data);
         }

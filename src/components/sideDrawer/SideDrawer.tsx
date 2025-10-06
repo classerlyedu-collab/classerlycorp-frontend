@@ -11,6 +11,7 @@ import { RouteName } from "../../routes/RouteNames";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IoBookOutline } from "react-icons/io5";
 import { PiBooksDuotone, PiStudentFill } from "react-icons/pi";
+import { MdOutlineSchool, MdSupervisorAccount } from "react-icons/md";
 import { RiFileList3Line } from "react-icons/ri";
 import { FiGrid } from "react-icons/fi";
 import { IoMdLogOut } from "react-icons/io";
@@ -26,6 +27,7 @@ interface MenuItem {
   text: string;
   route?: string;
   onClick?: () => void;
+  roleRestriction?: string; // Only show for specific role
 }
 
 const SideDrawer = () => {
@@ -156,6 +158,17 @@ const SideDrawer = () => {
       text: "Employees",
       route: RouteName.EMPLOYEES_SCREEN,
     },
+    {
+      icon: <MdSupervisorAccount className="mr-4 text-md md:text-base lg:text-2xl" />,
+      text: "Supervisors",
+      route: RouteName.SUPERVISORS_SCREEN,
+    },
+    {
+      icon: <MdOutlineSchool className="mr-4 text-md md:text-base lg:text-2xl" />,
+      text: "Instructors",
+      route: RouteName.INSTRUCTORS_SCREEN,
+      roleRestriction: "HR-Admin", // Only show for HR-Admin role
+    },
     // Removed subscription menu item - no longer needed
     {
       icon: (
@@ -223,8 +236,11 @@ const SideDrawer = () => {
       case "HR-Admin":
         return teacherMenuItems;
       case "Instructor": {
-        // Hide Subscription for Instructor
-        const filtered = teacherMenuItems.filter(mi => mi.route !== RouteName.SUBSCRIPTION);
+        // Hide Subscription and Instructors tab for Instructor
+        const filtered = teacherMenuItems.filter(mi =>
+          mi.route !== RouteName.SUBSCRIPTION &&
+          mi.roleRestriction !== "HR-Admin"
+        );
         return filtered;
       }
       case "Supervisor":

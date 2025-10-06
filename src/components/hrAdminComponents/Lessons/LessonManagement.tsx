@@ -2,6 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Get, Post, Put, Delete } from '../../../config/apiMethods';
 import { displayMessage } from '../../../config';
 import { FiPlus, FiEdit2, FiTrash2, FiFileText, FiChevronRight, FiExternalLink, FiEye, FiX, FiAlertTriangle } from 'react-icons/fi';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    rectSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Subject {
     _id: string;
@@ -25,8 +42,8 @@ interface Topic {
 interface Lesson {
     _id: string;
     name: string;
-    content: string; // Google Docs URL or YouTube URL
-    contentType: 'google_docs' | 'youtube';
+    content: string; // Google Docs URL, YouTube URL, Google Slides URL, or Google Sheets URL
+    contentType: 'google_docs' | 'youtube' | 'google_slides' | 'google_sheets';
     pages: number;
     words: number;
     lang: string;
@@ -38,6 +55,144 @@ interface LessonManagementProps {
     selectedTopic?: Topic | null;
     onBackToTopics?: () => void;
 }
+
+interface SortableLessonItemProps {
+    lesson: Lesson;
+    onEdit: (lesson: Lesson) => void;
+    onDelete: (lesson: Lesson) => void;
+    onOpenIframe: (lesson: Lesson) => void;
+    onOpenGoogleDoc: (content: string) => void;
+}
+
+const SortableLessonItem: React.FC<SortableLessonItemProps> = ({
+    lesson,
+    onEdit,
+    onDelete,
+    onOpenIframe,
+    onOpenGoogleDoc
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: lesson._id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden ${isDragging ? 'shadow-lg' : ''}`}
+        >
+            {/* Drag Handle */}
+            <div className="absolute top-2 left-2 z-10">
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing p-2 hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                    style={{ touchAction: 'none' }}
+                >
+                    <div className="w-4 h-4 bg-white bg-opacity-80 rounded"></div>
+                </div>
+            </div>
+
+            {/* Card Header */}
+            <div
+                className="relative h-32"
+                style={{
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%)'
+                }}
+            >
+                <div className="w-full h-full flex items-center justify-center">
+                    <FiFileText className="text-white" size={32} />
+                </div>
+                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button
+                        onClick={() => onEdit(lesson)}
+                        className="p-2 bg-violet-600 text-white hover:bg-violet-700 rounded-lg transition-colors"
+                        title="Edit Lesson"
+                    >
+                        <FiEdit2 size={16} />
+                    </button>
+                    <button
+                        onClick={() => onDelete(lesson)}
+                        className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
+                        title="Delete Lesson"
+                    >
+                        <FiTrash2 size={16} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Card Content */}
+            <div className="p-6">
+                <div className="mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 capitalize mb-2">{lesson.name || 'Untitled Lesson'}</h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                        {lesson.topic?.subject?.name || 'Unknown Subject'} • {lesson.topic?.name || 'Unknown Topic'}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                            <div className="text-lg font-bold text-gray-900">{lesson.pages || 0}</div>
+                            <div className="text-xs text-gray-500">Pages</div>
+                        </div>
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                            <div className="text-lg font-bold text-gray-900">{lesson.words || 0}</div>
+                            <div className="text-xs text-gray-500">Words</div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                        <span className="px-2 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
+                            {lesson.lang || 'Eng'}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                            {lesson.createdAt ? new Date(lesson.createdAt).toLocaleDateString() : 'Unknown'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => lesson.content && onOpenIframe(lesson)}
+                        className="flex-1 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-1 text-sm"
+                        style={{
+                            background: 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%)'
+                        }}
+                        onMouseEnter={(e) => {
+                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #7c3aed 0%, #9333ea 50%, #a855f7 100%)';
+                        }}
+                        onMouseLeave={(e) => {
+                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%)';
+                        }}
+                        disabled={!lesson.content}
+                    >
+                        <FiEye size={16} />
+                        <span>View</span>
+                    </button>
+                    <button
+                        onClick={() => lesson.content && onOpenGoogleDoc(lesson.content)}
+                        className="flex-1 bg-gray-600 text-white py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition-all duration-200 flex items-center justify-center gap-1 text-sm"
+                        disabled={!lesson.content}
+                    >
+                        <FiExternalLink size={16} />
+                        <span>Open</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBackToTopics }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -51,12 +206,24 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
     const [lessonToDelete, setLessonToDelete] = useState<Lesson | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
+    const [isReordering, setIsReordering] = useState<boolean>(false);
     const [formData, setFormData] = useState({
         name: '',
-        content: '', // Google Docs URL or YouTube URL
-        contentType: 'google_docs' as 'google_docs' | 'youtube',
+        content: '', // Google Docs URL, YouTube URL, Google Slides URL, or Google Sheets URL
+        contentType: 'google_docs' as 'google_docs' | 'youtube' | 'google_slides' | 'google_sheets',
         lang: 'Eng'
     });
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 2,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     useEffect(() => {
         if (selectedTopic) {
@@ -84,6 +251,51 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
         }
     };
 
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) {
+            return;
+        }
+
+        const oldIndex = lessons.findIndex((lesson) => lesson._id === active.id);
+        const newIndex = lessons.findIndex((lesson) => lesson._id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) {
+            return;
+        }
+
+        // Optimistically update the UI
+        const newLessons = arrayMove(lessons, oldIndex, newIndex);
+        setLessons(newLessons);
+
+        try {
+            setIsReordering(true);
+
+            // Prepare the order data for the API
+            const orderData = newLessons.map((lesson, index) => ({
+                id: lesson._id,
+                order: index
+            }));
+
+            const response = await Put('/topic/lesson/reorder', { lessons: orderData });
+
+            if (!response.success) {
+                // Revert the UI change if the API call failed
+                setLessons(lessons);
+                displayMessage(response.message || 'Failed to reorder lessons', 'error');
+            } else {
+                displayMessage('Lessons reordered successfully', 'success');
+            }
+        } catch (error: any) {
+            // Revert the UI change if the API call failed
+            setLessons(lessons);
+            displayMessage(error.message || 'Failed to reorder lessons', 'error');
+        } finally {
+            setIsReordering(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -95,6 +307,16 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
         // Validate URL based on content type
         if (formData.contentType === 'google_docs' && !formData.content.includes('docs.google.com')) {
             displayMessage('Please provide a valid Google Docs URL', 'error');
+            return;
+        }
+
+        if (formData.contentType === 'google_slides' && !formData.content.includes('docs.google.com/presentation')) {
+            displayMessage('Please provide a valid Google Slides URL', 'error');
+            return;
+        }
+
+        if (formData.contentType === 'google_sheets' && !formData.content.includes('docs.google.com/spreadsheets')) {
+            displayMessage('Please provide a valid Google Sheets URL', 'error');
             return;
         }
 
@@ -244,6 +466,24 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
             }
         }
 
+        // Handle Google Slides URLs
+        if (contentType === 'google_slides' || url.includes('docs.google.com/presentation')) {
+            if (url.includes('/presentation/d/')) {
+                const presentationId = url.split('/presentation/d/')[1].split('/')[0];
+                return `https://docs.google.com/presentation/d/${presentationId}/embed?start=false&loop=false&delayms=3000`;
+            }
+            return url; // Return as-is if already in embed format
+        }
+
+        // Handle Google Sheets URLs
+        if (contentType === 'google_sheets' || url.includes('docs.google.com/spreadsheets')) {
+            if (url.includes('/spreadsheets/d/')) {
+                const spreadsheetId = url.split('/spreadsheets/d/')[1].split('/')[0];
+                return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit?usp=sharing`;
+            }
+            return url; // Return as-is if already in embed format
+        }
+
         // Convert Google Docs URL to embeddable format
         if (url.includes('/document/d/')) {
             const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
@@ -308,98 +548,26 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {lessons.filter(lesson => lesson && lesson._id).map((lesson) => (
-                        <div key={lesson._id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden">
-                            {/* Card Header */}
-                            <div
-                                className="relative h-32"
-                                style={{
-                                    background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%)'
-                                }}
-                            >
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <FiFileText className="text-white" size={32} />
-                                </div>
-                                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <button
-                                        onClick={() => handleEdit(lesson)}
-                                        className="p-2 bg-violet-600 text-white hover:bg-violet-700 rounded-lg transition-colors"
-                                        title="Edit Lesson"
-                                    >
-                                        <FiEdit2 size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteClick(lesson)}
-                                        className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
-                                        title="Delete Lesson"
-                                    >
-                                        <FiTrash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Card Content */}
-                            <div className="p-6">
-                                <div className="mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900 capitalize mb-2">{lesson.name || 'Untitled Lesson'}</h3>
-                                    <p className="text-sm text-gray-600 mb-3">
-                                        {selectedTopic?.subject?.name || 'Unknown Subject'} • {selectedTopic?.name || 'Unknown Topic'}
-                                    </p>
-
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <div className="text-center p-3 bg-gray-50 rounded-lg">
-                                            <div className="text-lg font-bold text-gray-900">{lesson.pages || 0}</div>
-                                            <div className="text-xs text-gray-500">Pages</div>
-                                        </div>
-                                        <div className="text-center p-3 bg-gray-50 rounded-lg">
-                                            <div className="text-lg font-bold text-gray-900">{lesson.words || 0}</div>
-                                            <div className="text-xs text-gray-500">Words</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                                        <span className="px-2 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
-                                            {lesson.lang || 'Eng'}
-                                        </span>
-                                        <span className="text-xs text-gray-400">
-                                            {lesson.createdAt ? new Date(lesson.createdAt).toLocaleDateString() : 'Unknown'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => lesson.content && openLessonInIframe(lesson)}
-                                        className="flex-1 text-white py-2 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-1 text-sm"
-                                        style={{
-                                            background: 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%)'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #7c3aed 0%, #9333ea 50%, #a855f7 100%)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%)';
-                                        }}
-                                        disabled={!lesson.content}
-                                    >
-                                        <FiEye size={16} />
-                                        <span>View</span>
-                                    </button>
-                                    <button
-                                        onClick={() => lesson.content && openGoogleDoc(lesson.content)}
-                                        className="flex-1 bg-gray-600 text-white py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition-all duration-200 flex items-center justify-center gap-1 text-sm"
-                                        disabled={!lesson.content}
-                                    >
-                                        <FiExternalLink size={16} />
-                                        <span>Open</span>
-                                    </button>
-                                </div>
-                            </div>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext items={lessons.filter(lesson => lesson && lesson._id).map(lesson => lesson._id)} strategy={rectSortingStrategy}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {lessons.filter(lesson => lesson && lesson._id).map((lesson) => (
+                                <SortableLessonItem
+                                    key={lesson._id}
+                                    lesson={lesson}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDeleteClick}
+                                    onOpenIframe={openLessonInIframe}
+                                    onOpenGoogleDoc={openGoogleDoc}
+                                />
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </SortableContext>
+                </DndContext>
             )}
 
             {/* Add/Edit Modal */}
@@ -433,11 +601,13 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                                     </label>
                                     <select
                                         value={formData.contentType}
-                                        onChange={(e) => setFormData({ ...formData, contentType: e.target.value as 'google_docs' | 'youtube' })}
+                                        onChange={(e) => setFormData({ ...formData, contentType: e.target.value as 'google_docs' | 'youtube' | 'google_slides' | 'google_sheets' })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         disabled={isSubmitting}
                                     >
                                         <option value="google_docs">Google Docs</option>
+                                        <option value="google_slides">Google Slides</option>
+                                        <option value="google_sheets">Google Sheets</option>
                                         <option value="youtube">YouTube Video</option>
                                     </select>
                                 </div>
@@ -445,7 +615,9 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         {formData.contentType === 'google_docs' ? 'Google Docs URL' :
-                                            formData.contentType === 'youtube' ? 'YouTube URL' : 'Content URL'}
+                                            formData.contentType === 'google_slides' ? 'Google Slides URL' :
+                                                formData.contentType === 'google_sheets' ? 'Google Sheets URL' :
+                                                    formData.contentType === 'youtube' ? 'YouTube URL' : 'Content URL'}
                                     </label>
                                     <input
                                         type="url"
@@ -454,14 +626,18 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         placeholder={
                                             formData.contentType === 'google_docs' ? 'https://docs.google.com/document/d/...' :
-                                                'https://www.youtube.com/watch?v=... or https://youtu.be/...'
+                                                formData.contentType === 'google_slides' ? 'https://docs.google.com/presentation/d/...' :
+                                                    formData.contentType === 'google_sheets' ? 'https://docs.google.com/spreadsheets/d/...' :
+                                                        'https://www.youtube.com/watch?v=... or https://youtu.be/...'
                                         }
                                         disabled={isSubmitting}
                                         required
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
                                         {formData.contentType === 'google_docs' ? 'Paste the Google Docs URL here. Make sure the document is publicly accessible.' :
-                                            'Paste the YouTube video URL here. Supports youtube.com and youtu.be formats.'}
+                                            formData.contentType === 'google_slides' ? 'Paste the Google Slides URL here. Make sure the presentation is publicly accessible.' :
+                                                formData.contentType === 'google_sheets' ? 'Paste the Google Sheets URL here. Make sure the spreadsheet is publicly accessible.' :
+                                                    'Paste the YouTube video URL here. Supports youtube.com and youtu.be formats.'}
                                     </p>
                                 </div>
 

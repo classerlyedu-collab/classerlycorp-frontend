@@ -1,36 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Get, Delete, Put } from '../../../config/apiMethods';
-import { displayMessage } from '../../../config';
+import { Get, Delete } from '../../../../config/apiMethods';
+import { displayMessage } from '../../../../config';
 import {
     BsClock,
     BsCheckCircle,
     BsXCircle,
     BsPersonFill,
-    BsChevronRight,
     BsEye,
     BsTrash3,
     BsX,
     BsTag,
     BsPlus,
     BsList,
-    BsPencilSquare
 } from 'react-icons/bs';
 
-interface Request {
+interface InstructorRequest {
     _id: string;
     status: 'Pending' | 'Complete' | 'Rejected';
-    employee?: {
-        _id: string;
-        code: string;
-        auth: {
-            _id: string;
-            fullName: string;
-            email: string;
-            userName: string;
-            image?: string;
-        };
-    };
-    instructor?: {
+    instructor: {
         _id: string;
         code: string;
         auth: {
@@ -46,42 +33,35 @@ interface Request {
     updatedAt: string;
 }
 
-interface RequestManagementProps {
+interface InstructorRequestManagementProps {
     refreshTrigger?: number;
-    title?: string;
-    emptyStateText?: string;
 }
 
-const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, title = "Employee Requests", emptyStateText = "When employees request to join your team, they will appear here for your review" }) => {
-    const [requests, setRequests] = useState<Request[]>([]);
+const InstructorRequestManagement: React.FC<InstructorRequestManagementProps> = ({ refreshTrigger }) => {
+    const [requests, setRequests] = useState<InstructorRequest[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
-    const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+    const [selectedRequest, setSelectedRequest] = useState<InstructorRequest | null>(null);
     const [showSubjectsModal, setShowSubjectsModal] = useState<boolean>(false);
-    const [showEditSubjectsModal, setShowEditSubjectsModal] = useState<boolean>(false);
     const [deletingRequest, setDeletingRequest] = useState<string | null>(null);
     const [cancellingRequest, setCancellingRequest] = useState<string | null>(null);
-    const [updatingSubjects, setUpdatingSubjects] = useState<boolean>(false);
-    const [loadingEditSubjects, setLoadingEditSubjects] = useState<boolean>(false);
     const [loadingViewSubjects, setLoadingViewSubjects] = useState<boolean>(false);
     const [showCancelConfirmModal, setShowCancelConfirmModal] = useState<boolean>(false);
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<boolean>(false);
     const [requestToCancel, setRequestToCancel] = useState<string | null>(null);
     const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
-    const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
-    const [selectedSubjectsForEdit, setSelectedSubjectsForEdit] = useState<string[]>([]);
     const [topicsForSubject, setTopicsForSubject] = useState<any[]>([]);
 
     const fetchRequests = async () => {
         try {
             setLoading(true);
-            const response = await Get('/hr-admin/requests');
+            const response = await Get('/hr-admin/instructor-requests');
             if (response.success) {
                 setRequests(response.data || []);
             } else {
-                displayMessage(response.message || "Failed to load requests", "error");
+                displayMessage(response.message || "Failed to load instructor requests", "error");
             }
         } catch (error) {
-            displayMessage("Failed to load requests", "error");
+            displayMessage("Failed to load instructor requests", "error");
         } finally {
             setLoading(false);
         }
@@ -112,7 +92,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
 
         try {
             setCancellingRequest(requestToCancel);
-            const response = await Delete(`/hr-admin/requests/${requestToCancel}/cancel`);
+            const response = await Delete(`/hr-admin/instructor-requests/${requestToCancel}/cancel`);
             if (response.success) {
                 displayMessage('Request cancelled successfully', 'success');
                 setRequests(prev => prev.filter(req => req._id !== requestToCancel));
@@ -133,7 +113,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
 
         try {
             setDeletingRequest(requestToDelete);
-            const response = await Delete(`/hr-admin/requests/${requestToDelete}/delete`);
+            const response = await Delete(`/hr-admin/instructor-requests/${requestToDelete}/delete`);
             if (response.success) {
                 displayMessage('Request deleted successfully', 'success');
                 setRequests(prev => prev.filter(req => req._id !== requestToDelete));
@@ -149,7 +129,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
         }
     };
 
-    const handleShowSubjects = async (request: Request) => {
+    const handleShowSubjects = async (request: InstructorRequest) => {
         try {
             setLoadingViewSubjects(true);
             setSelectedRequest(request);
@@ -170,27 +150,6 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
         }
     };
 
-    const handleEditSubjects = async (request: Request) => {
-        try {
-            setLoadingEditSubjects(true);
-            setSelectedRequest(request);
-            setSelectedSubjectsForEdit(request.subjects.map((s: any) => s._id));
-
-            const subjectsResponse = await Get('/subject');
-
-            if (subjectsResponse.success) {
-                setAvailableSubjects(subjectsResponse.data);
-            } else {
-                displayMessage(subjectsResponse.message || "Failed to load subjects", "error");
-            }
-
-            setShowEditSubjectsModal(true);
-        } catch (error) {
-            displayMessage("Failed to load data", "error");
-        } finally {
-            setLoadingEditSubjects(false);
-        }
-    };
 
     const getTopicsForSubject = (subjectId: string, subjectsArray?: any[]) => {
         // First try to get topics from the subject object directly (populated from backend)
@@ -204,32 +163,6 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
         return topicsForSubject.filter(topic => topic.subject === subjectId);
     };
 
-    const handleUpdateSubjects = async () => {
-        if (!selectedRequest) return;
-
-        try {
-            setUpdatingSubjects(true);
-            const response = await Put(`/hr-admin/requests/${selectedRequest._id}/subjects`, {
-                subjects: selectedSubjectsForEdit
-            });
-
-            if (response.success) {
-                displayMessage('Subjects updated successfully', 'success');
-                setRequests(prev => prev.map(req =>
-                    req._id === selectedRequest._id
-                        ? { ...req, subjects: availableSubjects.filter(s => selectedSubjectsForEdit.includes(s._id)) }
-                        : req
-                ));
-                setShowEditSubjectsModal(false);
-            } else {
-                displayMessage(response.message || "Failed to update subjects", "error");
-            }
-        } catch (error) {
-            displayMessage("Failed to update subjects", "error");
-        } finally {
-            setUpdatingSubjects(false);
-        }
-    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -284,8 +217,8 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                             <BsList className="w-5 h-5 md:w-6 md:h-6 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-lg md:text-2xl font-bold text-gray-900">{title}</h2>
-                            <p className="text-xs md:text-sm text-gray-600 mt-1">Monitor and manage team join requests</p>
+                            <h2 className="text-lg md:text-2xl font-bold text-gray-900">Instructor Requests</h2>
+                            <p className="text-xs md:text-sm text-gray-600 mt-1">Monitor and manage instructor join requests</p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
@@ -307,8 +240,8 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
                             <div className="flex items-center space-x-3">
-                                <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-600 border-t-transparent"></div>
-                                <span className="text-gray-600 font-medium">Loading requests...</span>
+                                <div className="animate-spin rounded-full h-8 w-8 border-3 border-purple-600 border-t-transparent"></div>
+                                <span className="text-gray-600 font-medium">Loading instructor requests...</span>
                             </div>
                         </div>
                     ) : requests.filter((request) => request.status !== 'Complete').length === 0 ? (
@@ -318,7 +251,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                             </div>
                             <h3 className="text-lg font-semibold text-gray-600 mb-2">No Pending Requests</h3>
                             <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                                {emptyStateText}
+                                When instructors request to join your team, they will appear here for your review
                             </p>
                         </div>
                     ) : (
@@ -335,8 +268,8 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                                             <div className="relative">
                                                 <div className="w-10 h-10 md:w-14 md:h-14 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shadow-md">
                                                     <img
-                                                        src={(request.employee?.auth?.image || request.instructor?.auth?.image) || require("../../../images/settings/profile.png")}
-                                                        alt={(request.employee?.auth?.fullName || request.instructor?.auth?.fullName || 'User') as string}
+                                                        src={request.instructor?.auth?.image || require("../../../../images/settings/profile.png")}
+                                                        alt={request.instructor?.auth?.fullName || 'Instructor'}
                                                         className="w-full h-full object-cover"
                                                     />
                                                 </div>
@@ -349,12 +282,12 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="text-base md:text-lg font-bold text-gray-900 truncate">
-                                                    {request.employee?.auth?.fullName || request.instructor?.auth?.fullName || request.employee?.auth?.userName || request.instructor?.auth?.userName || 'User'}
+                                                    {request.instructor?.auth?.fullName || request.instructor?.auth?.userName || 'Instructor'}
                                                 </h3>
-                                                <p className="text-xs md:text-sm text-gray-600 truncate">{request.employee?.auth?.email || request.instructor?.auth?.email || ''}</p>
+                                                <p className="text-xs md:text-sm text-gray-600 truncate">{request.instructor?.auth?.email || ''}</p>
                                                 <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
                                                     <BsTag className="w-3 h-3" />
-                                                    <span className="font-mono font-medium">ID: {request.employee?.code || request.instructor?.code || 'N/A'}</span>
+                                                    <span className="font-mono font-medium">ID: {request.instructor?.code || 'N/A'}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -373,7 +306,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                                             <button
                                                 onClick={() => handleShowSubjects(request)}
                                                 disabled={loadingViewSubjects}
-                                                className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                                                className="inline-flex items-center space-x-1 px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                                             >
                                                 {loadingViewSubjects ? (
                                                     <>
@@ -389,27 +322,6 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                                                     </>
                                                 )}
                                             </button>
-                                            {request.status === 'Pending' && (
-                                                <button
-                                                    onClick={() => handleEditSubjects(request)}
-                                                    disabled={loadingEditSubjects}
-                                                    className="inline-flex items-center space-x-1 px-2 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                                                >
-                                                    {loadingEditSubjects ? (
-                                                        <>
-                                                            <div className="animate-spin w-3 h-3 border border-white border-t-transparent rounded-full"></div>
-                                                            <span className="hidden sm:inline">Loading...</span>
-                                                            <span className="sm:hidden">...</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <BsPencilSquare className="w-3 h-3" />
-                                                            <span className="hidden sm:inline">Edit Subjects</span>
-                                                            <span className="sm:hidden">Edit</span>
-                                                        </>
-                                                    )}
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
 
@@ -484,7 +396,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                                 </button>
                             </div>
                             <p className="text-xs md:text-sm text-gray-600 mt-1">
-                                {selectedRequest.employee?.auth?.fullName || selectedRequest.instructor?.auth?.fullName || 'User'} - {selectedRequest.subjects.length} subjects
+                                {selectedRequest.instructor?.auth?.fullName || 'Instructor'} - {selectedRequest.subjects.length} subjects
                             </p>
                         </div>
                         <div className="p-4 md:p-6 max-h-64 overflow-y-auto">
@@ -497,8 +409,8 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                                             className="p-4 bg-gray-50 rounded-lg border border-gray-200"
                                         >
                                             <div className="flex items-start space-x-3">
-                                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                    <BsPlus className="w-5 h-5 text-blue-600" />
+                                                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <BsPlus className="w-5 h-5 text-purple-600" />
                                                 </div>
                                                 <div className="flex-1">
                                                     <h4 className="font-semibold text-gray-900">{subject.name || 'Subject Name'}</h4>
@@ -509,7 +421,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                                                                 {topics.slice(0, 3).map((topic: any, idx: number) => (
                                                                     <span
                                                                         key={idx}
-                                                                        className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
+                                                                        className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded"
                                                                     >
                                                                         {topic.name}
                                                                     </span>
@@ -540,7 +452,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                         <div className="p-4 md:p-6 border-t border-gray-200 bg-gray-50">
                             <button
                                 onClick={() => setShowSubjectsModal(false)}
-                                className="w-full px-4 py-2 md:py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                                className="w-full px-4 py-2 md:py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors"
                             >
                                 Close
                             </button>
@@ -549,99 +461,6 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                 </div>
             )}
 
-            {/* Edit Subjects Modal */}
-            {showEditSubjectsModal && selectedRequest && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 md:p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] md:max-h-[80vh] overflow-hidden">
-                        <div className="p-4 md:p-6 border-b border-gray-200">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg md:text-xl font-bold text-gray-900">Edit Subject Assignment</h3>
-                                <button
-                                    onClick={() => setShowEditSubjectsModal(false)}
-                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                                >
-                                    <BsX className="w-5 h-5 md:w-6 md:h-6" />
-                                </button>
-                            </div>
-                            <p className="text-xs md:text-sm text-gray-600 mt-1">
-                                {selectedRequest.employee?.auth?.fullName || selectedRequest.instructor?.auth?.fullName || 'User'} - Select subjects to assign
-                            </p>
-                        </div>
-                        <div className="p-4 md:p-6 max-h-64 overflow-y-auto">
-                            <div className="grid grid-cols-1 gap-3">
-                                {availableSubjects.map((subject: any) => {
-                                    const topics = subject.topics || getTopicsForSubject(subject._id, availableSubjects);
-                                    return (
-                                        <label
-                                            key={subject._id}
-                                            className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedSubjectsForEdit.includes(subject._id)}
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                                    if (e.target.checked) {
-                                                        setSelectedSubjectsForEdit(prev => [...prev, subject._id]);
-                                                    } else {
-                                                        setSelectedSubjectsForEdit(prev => prev.filter(id => id !== subject._id));
-                                                    }
-                                                }}
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
-                                            />
-                                            <div className="flex-1">
-                                                <div className="font-medium text-gray-900">{subject.name}</div>
-                                                {topics.length > 0 ? (
-                                                    <div className="mt-1">
-                                                        <div className="text-xs text-gray-500 mb-1">Topics: {topics.length} available</div>
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {topics.slice(0, 2).map((topic: any, idx: number) => (
-                                                                <span
-                                                                    key={idx}
-                                                                    className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded"
-                                                                >
-                                                                    {topic.name}
-                                                                </span>
-                                                            ))}
-                                                            {topics.length > 2 && (
-                                                                <span className="text-xs text-gray-400">
-                                                                    +{topics.length - 2} more
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-xs text-gray-400 mt-1">No topics available</div>
-                                                )}
-                                            </div>
-                                        </label>
-                                    );
-                                })}
-                                {availableSubjects.length === 0 && (
-                                    <div className="text-center py-8">
-                                        <BsList className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                                        <p className="text-gray-500">No subjects available</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="p-4 md:p-6 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-                            <button
-                                onClick={() => setShowEditSubjectsModal(false)}
-                                className="w-full sm:w-auto px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleUpdateSubjects}
-                                disabled={updatingSubjects}
-                                className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {updatingSubjects ? 'Updating...' : 'Update Subjects'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Cancel Confirmation Modal */}
             {showCancelConfirmModal && (
@@ -660,7 +479,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                         </div>
                         <div className="p-4 md:p-6">
                             <p className="text-sm md:text-base text-gray-700 mb-4">
-                                Are you sure you want to cancel this pending request? The employee will be notified and this request will be removed from the system.
+                                Are you sure you want to cancel this pending instructor request? The instructor will be notified and this request will be removed from the system.
                             </p>
                         </div>
                         <div className="p-4 md:p-6 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3">
@@ -702,7 +521,7 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
                         </div>
                         <div className="p-4 md:p-6">
                             <p className="text-sm md:text-base text-gray-700 mb-4">
-                                Are you sure you want to permanently delete this rejected request? This action will permanently remove the request from the system.
+                                Are you sure you want to permanently delete this rejected instructor request? This action will permanently remove the request from the system.
                             </p>
                         </div>
                         <div className="p-4 md:p-6 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3">
@@ -730,4 +549,4 @@ const RequestManagement: React.FC<RequestManagementProps> = ({ refreshTrigger, t
     );
 };
 
-export default RequestManagement;
+export default InstructorRequestManagement;

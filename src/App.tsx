@@ -11,6 +11,8 @@ const Calendar = lazy(() => import("./screens/supervisorScreens/Calendar/Calenda
 const Settings = lazy(() => import("./screens/supervisorScreens/Settings/Settings"));
 const DashboardTeacher = lazy(() => import("./screens/hrAdminScreens/Dashboard").then(module => ({ default: module.DashboardTeacher })));
 const Employees = lazy(() => import("./screens/hrAdminScreens/Employees").then(module => ({ default: module.Students })));
+const Supervisors = lazy(() => import("./screens/hrAdminScreens/Supervisors/Supervisors"));
+const Instructors = lazy(() => import("./screens/hrAdminScreens/Instructors/Instructors"));
 const Subscription = lazy(() => import("./screens/hrAdminScreens/Subscription/Subscription"));
 const EmployeeDetails = lazy(() => import("./screens/hrAdminScreens/EmployeeDetails").then(module => ({ default: module.EmployeeDetails })));
 const MyQuizzes = lazy(() => import("./screens/hrAdminScreens/MyQuizzes").then(module => ({ default: module.MyQuizzes })));
@@ -73,6 +75,16 @@ function App() {
           <Route path={RouteName.EMPLOYEES_SCREEN} element={
             <ProtectedRoute requiredRole="HR-Admin">
               <Employees />
+            </ProtectedRoute>
+          } />
+          <Route path={RouteName.SUPERVISORS_SCREEN} element={
+            <ProtectedRoute requiredRole="HR-Admin">
+              <Supervisors />
+            </ProtectedRoute>
+          } />
+          <Route path={RouteName.INSTRUCTORS_SCREEN} element={
+            <ProtectedRoute requiredRole="HR-Admin">
+              <Instructors />
             </ProtectedRoute>
           } />
           <Route path={RouteName.EMPLOYEE_DETAILS_SCREEN} element={

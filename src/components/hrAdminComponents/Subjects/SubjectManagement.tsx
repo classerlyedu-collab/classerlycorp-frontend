@@ -2,6 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Get, Post, Put, Delete } from '../../../config/apiMethods';
 import { displayMessage } from '../../../config';
 import { FiPlus, FiEdit2, FiTrash2, FiImage, FiBookOpen, FiChevronRight, FiX, FiAlertTriangle } from 'react-icons/fi';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    rectSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Subject {
     _id: string;
@@ -15,6 +32,128 @@ interface Subject {
 interface SubjectManagementProps {
     onNavigateToTopics?: (subject: Subject) => void;
 }
+
+interface SortableSubjectItemProps {
+    subject: Subject;
+    onEdit: (subject: Subject) => void;
+    onDelete: (subject: Subject) => void;
+    onNavigateToTopics?: (subject: Subject) => void;
+}
+
+const SortableSubjectItem: React.FC<SortableSubjectItemProps> = ({
+    subject,
+    onEdit,
+    onDelete,
+    onNavigateToTopics
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: subject._id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden ${isDragging ? 'shadow-lg' : ''}`}
+        >
+            {/* Drag Handle */}
+            <div className="absolute top-2 left-2 z-10">
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing p-2 hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                    style={{ touchAction: 'none' }}
+                >
+                    <div className="w-4 h-4 bg-white bg-opacity-80 rounded"></div>
+                </div>
+            </div>
+
+            {/* Card Header with Image */}
+            <div
+                className="relative h-32"
+                style={{
+                    background: 'linear-gradient(135deg, #2563eb 0%, #4338ca 100%)'
+                }}
+            >
+                {subject.image ? (
+                    <img
+                        src={subject.image}
+                        alt={subject.name}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <FiImage className="text-white" size={32} />
+                    </div>
+                )}
+                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button
+                        onClick={() => onEdit(subject)}
+                        className="p-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors"
+                        title="Edit Subject"
+                    >
+                        <FiEdit2 size={16} />
+                    </button>
+                    <button
+                        onClick={() => onDelete(subject)}
+                        className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
+                        title="Delete Subject"
+                    >
+                        <FiTrash2 size={16} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Card Content */}
+            <div className="p-6">
+                <div className="mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 capitalize mb-2">{subject.name}</h3>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                            <FiBookOpen size={16} className="text-blue-500" />
+                            <span>{subject.topics?.length || 0} topics</span>
+                        </div>
+                        <div className="text-xs text-gray-400">
+                            {new Date(subject.createdAt).toLocaleDateString()}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action Button */}
+                {onNavigateToTopics && (
+                    <button
+                        onClick={() => onNavigateToTopics(subject)}
+                        className="w-full text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 group/btn"
+                        style={{
+                            background: 'linear-gradient(90deg, #2563eb 0%, #4338ca 100%)'
+                        }}
+                        onMouseEnter={(e) => {
+                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #1d4ed8 0%, #3730a3 100%)';
+                        }}
+                        onMouseLeave={(e) => {
+                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #2563eb 0%, #4338ca 100%)';
+                        }}
+                    >
+                        <FiBookOpen size={18} />
+                        <span>View Topics</span>
+                        <FiChevronRight size={18} className="group-hover/btn:translate-x-1 transition-transform duration-200" />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
 
 const SubjectManagement: React.FC<SubjectManagementProps> = ({ onNavigateToTopics }) => {
     const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -30,11 +169,68 @@ const SubjectManagement: React.FC<SubjectManagementProps> = ({ onNavigateToTopic
     });
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [isReordering, setIsReordering] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 2,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     useEffect(() => {
         fetchSubjects();
     }, []);
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) {
+            return;
+        }
+
+        const oldIndex = subjects.findIndex((subject) => subject._id === active.id);
+        const newIndex = subjects.findIndex((subject) => subject._id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) {
+            return;
+        }
+
+        // Optimistically update the UI
+        const newSubjects = arrayMove(subjects, oldIndex, newIndex);
+        setSubjects(newSubjects);
+
+        try {
+            setIsReordering(true);
+
+            // Prepare the order data for the API
+            const orderData = newSubjects.map((subject, index) => ({
+                id: subject._id,
+                order: index
+            }));
+
+            const response = await Put('/subject/reorder', { subjects: orderData });
+
+            if (!response.success) {
+                // Revert the UI change if the API call failed
+                setSubjects(subjects);
+                displayMessage(response.message || 'Failed to reorder subjects', 'error');
+            } else {
+                displayMessage('Subjects reordered successfully', 'success');
+            }
+        } catch (error: any) {
+            // Revert the UI change if the API call failed
+            setSubjects(subjects);
+            displayMessage(error.message || 'Failed to reorder subjects', 'error');
+        } finally {
+            setIsReordering(false);
+        }
+    };
 
     const fetchSubjects = async () => {
         try {
@@ -238,84 +434,25 @@ const SubjectManagement: React.FC<SubjectManagementProps> = ({ onNavigateToTopic
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {subjects.map((subject) => (
-                        <div key={subject._id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden">
-                            {/* Card Header with Image */}
-                            <div
-                                className="relative h-32"
-                                style={{
-                                    background: 'linear-gradient(135deg, #2563eb 0%, #4338ca 100%)'
-                                }}
-                            >
-                                {subject.image ? (
-                                    <img
-                                        src={subject.image}
-                                        alt={subject.name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <FiImage className="text-white" size={32} />
-                                    </div>
-                                )}
-                                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <button
-                                        onClick={() => handleEdit(subject)}
-                                        className="p-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors"
-                                        title="Edit Subject"
-                                    >
-                                        <FiEdit2 size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteClick(subject)}
-                                        className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
-                                        title="Delete Subject"
-                                    >
-                                        <FiTrash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Card Content */}
-                            <div className="p-6">
-                                <div className="mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900 capitalize mb-2">{subject.name}</h3>
-                                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                                        <div className="flex items-center gap-1">
-                                            <FiBookOpen size={16} className="text-blue-500" />
-                                            <span>{subject.topics?.length || 0} topics</span>
-                                        </div>
-                                        <div className="text-xs text-gray-400">
-                                            {new Date(subject.createdAt).toLocaleDateString()}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Action Button */}
-                                {onNavigateToTopics && (
-                                    <button
-                                        onClick={() => onNavigateToTopics(subject)}
-                                        className="w-full text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 group/btn"
-                                        style={{
-                                            background: 'linear-gradient(90deg, #2563eb 0%, #4338ca 100%)'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #1d4ed8 0%, #3730a3 100%)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #2563eb 0%, #4338ca 100%)';
-                                        }}
-                                    >
-                                        <FiBookOpen size={18} />
-                                        <span>View Topics</span>
-                                        <FiChevronRight size={18} className="group-hover/btn:translate-x-1 transition-transform duration-200" />
-                                    </button>
-                                )}
-                            </div>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext items={subjects.map(subject => subject._id)} strategy={rectSortingStrategy}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {subjects.map((subject) => (
+                                <SortableSubjectItem
+                                    key={subject._id}
+                                    subject={subject}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDeleteClick}
+                                    onNavigateToTopics={onNavigateToTopics}
+                                />
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </SortableContext>
+                </DndContext>
             )}
 
             {/* Add/Edit Modal */}

@@ -2,6 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Get, Post, Put, Delete } from '../../../config/apiMethods';
 import { displayMessage } from '../../../config';
 import { FiPlus, FiEdit2, FiTrash2, FiBookOpen, FiFileText, FiChevronRight, FiAlertTriangle } from 'react-icons/fi';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    rectSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Subject {
     _id: string;
@@ -28,6 +45,128 @@ interface TopicManagementProps {
     onBackToSubjects?: () => void;
 }
 
+interface SortableTopicItemProps {
+    topic: Topic;
+    onEdit: (topic: Topic) => void;
+    onDelete: (topic: Topic) => void;
+    onNavigateToLessons?: (topic: Topic) => void;
+    getDifficultyColor: (difficulty: string) => string;
+}
+
+const SortableTopicItem: React.FC<SortableTopicItemProps> = ({
+    topic,
+    onEdit,
+    onDelete,
+    onNavigateToLessons,
+    getDifficultyColor
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: topic._id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden ${isDragging ? 'shadow-lg' : ''}`}
+        >
+            {/* Drag Handle */}
+            <div className="absolute top-2 left-2 z-10">
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing p-2 hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                    style={{ touchAction: 'none' }}
+                >
+                    <div className="w-4 h-4 bg-white bg-opacity-80 rounded"></div>
+                </div>
+            </div>
+
+            {/* Card Header */}
+            <div
+                className="relative h-24"
+                style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #0d9488 100%)'
+                }}
+            >
+                <div className="w-full h-full flex items-center justify-center">
+                    <FiBookOpen className="text-white" size={28} />
+                </div>
+                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button
+                        onClick={() => onEdit(topic)}
+                        className="p-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors"
+                        title="Edit Topic"
+                    >
+                        <FiEdit2 size={16} />
+                    </button>
+                    <button
+                        onClick={() => onDelete(topic)}
+                        className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
+                        title="Delete Topic"
+                    >
+                        <FiTrash2 size={16} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Card Content */}
+            <div className="p-6">
+                <div className="mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 capitalize mb-2">{topic.name}</h3>
+                    <p className="text-sm text-gray-600 mb-3">{topic.subject.name}</p>
+
+                    <div className="flex items-center justify-between mb-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(topic.difficulty)}`}>
+                            {topic.difficulty}
+                        </span>
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                            <FiFileText size={16} className="text-emerald-500" />
+                            <span>{topic.lessons?.length || 0} lessons</span>
+                        </div>
+                    </div>
+
+                    <div className="text-xs text-gray-400 mb-4">
+                        Created: {new Date(topic.createdAt).toLocaleDateString()}
+                    </div>
+                </div>
+
+                {/* Action Button */}
+                {onNavigateToLessons && (
+                    <button
+                        onClick={() => onNavigateToLessons(topic)}
+                        className="w-full text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 group/btn"
+                        style={{
+                            background: 'linear-gradient(90deg, #059669 0%, #0f766e 100%)'
+                        }}
+                        onMouseEnter={(e) => {
+                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #047857 0%, #0f766e 100%)';
+                        }}
+                        onMouseLeave={(e) => {
+                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #059669 0%, #0f766e 100%)';
+                        }}
+                    >
+                        <FiFileText size={18} />
+                        <span>View Lessons</span>
+                        <FiChevronRight size={18} className="group-hover/btn:translate-x-1 transition-transform duration-200" />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNavigateToLessons, onBackToSubjects }) => {
     const [topics, setTopics] = useState<Topic[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -37,12 +176,24 @@ const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNa
     const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
+    const [isReordering, setIsReordering] = useState<boolean>(false);
     const [formData, setFormData] = useState({
         name: '',
         subject: '',
         difficulty: 'Beginner' as 'Beginner' | 'Medium' | 'Advanced',
         type: 'Standard'
     });
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 2,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     useEffect(() => {
         fetchTopics();
@@ -75,6 +226,51 @@ const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNa
             displayMessage(error.message, 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) {
+            return;
+        }
+
+        const oldIndex = topics.findIndex((topic) => topic._id === active.id);
+        const newIndex = topics.findIndex((topic) => topic._id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) {
+            return;
+        }
+
+        // Optimistically update the UI
+        const newTopics = arrayMove(topics, oldIndex, newIndex);
+        setTopics(newTopics);
+
+        try {
+            setIsReordering(true);
+
+            // Prepare the order data for the API
+            const orderData = newTopics.map((topic, index) => ({
+                id: topic._id,
+                order: index
+            }));
+
+            const response = await Put('/topic/reorder', { topics: orderData });
+
+            if (!response.success) {
+                // Revert the UI change if the API call failed
+                setTopics(topics);
+                displayMessage(response.message || 'Failed to reorder topics', 'error');
+            } else {
+                displayMessage('Topics reordered successfully', 'success');
+            }
+        } catch (error: any) {
+            // Revert the UI change if the API call failed
+            setTopics(topics);
+            displayMessage(error.message || 'Failed to reorder topics', 'error');
+        } finally {
+            setIsReordering(false);
         }
     };
 
@@ -260,82 +456,26 @@ const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNa
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {topics.map((topic) => (
-                        <div key={topic._id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden">
-                            {/* Card Header */}
-                            <div
-                                className="relative h-24"
-                                style={{
-                                    background: 'linear-gradient(135deg, #10b981 0%, #0d9488 100%)'
-                                }}
-                            >
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <FiBookOpen className="text-white" size={28} />
-                                </div>
-                                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <button
-                                        onClick={() => handleEdit(topic)}
-                                        className="p-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors"
-                                        title="Edit Topic"
-                                    >
-                                        <FiEdit2 size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteClick(topic)}
-                                        className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
-                                        title="Delete Topic"
-                                    >
-                                        <FiTrash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Card Content */}
-                            <div className="p-6">
-                                <div className="mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900 capitalize mb-2">{topic.name}</h3>
-                                    <p className="text-sm text-gray-600 mb-3">{topic.subject.name}</p>
-
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(topic.difficulty)}`}>
-                                            {topic.difficulty}
-                                        </span>
-                                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                                            <FiFileText size={16} className="text-emerald-500" />
-                                            <span>{topic.lessons?.length || 0} lessons</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="text-xs text-gray-400 mb-4">
-                                        Created: {new Date(topic.createdAt).toLocaleDateString()}
-                                    </div>
-                                </div>
-
-                                {/* Action Button */}
-                                {onNavigateToLessons && (
-                                    <button
-                                        onClick={() => onNavigateToLessons(topic)}
-                                        className="w-full text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 group/btn"
-                                        style={{
-                                            background: 'linear-gradient(90deg, #059669 0%, #0f766e 100%)'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #047857 0%, #0f766e 100%)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            (e.target as HTMLButtonElement).style.background = 'linear-gradient(90deg, #059669 0%, #0f766e 100%)';
-                                        }}
-                                    >
-                                        <FiFileText size={18} />
-                                        <span>View Lessons</span>
-                                        <FiChevronRight size={18} className="group-hover/btn:translate-x-1 transition-transform duration-200" />
-                                    </button>
-                                )}
-                            </div>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext items={topics.map(topic => topic._id)} strategy={rectSortingStrategy}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {topics.map((topic) => (
+                                <SortableTopicItem
+                                    key={topic._id}
+                                    topic={topic}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDeleteClick}
+                                    onNavigateToLessons={onNavigateToLessons}
+                                    getDifficultyColor={getDifficultyColor}
+                                />
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </SortableContext>
+                </DndContext>
             )}
 
             {/* Add/Edit Modal */}

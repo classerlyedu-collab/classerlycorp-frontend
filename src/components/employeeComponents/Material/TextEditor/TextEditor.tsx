@@ -18,6 +18,16 @@ const TextEditor = () => {
         return url && (url.includes('youtube.com') || url.includes('youtu.be'));
     };
 
+    // Helper function to detect if content is Google Slides URL
+    const isGoogleSlidesUrl = (url: string) => {
+        return url && url.includes('docs.google.com/presentation');
+    };
+
+    // Helper function to detect if content is Google Sheets URL
+    const isGoogleSheetsUrl = (url: string) => {
+        return url && url.includes('docs.google.com/spreadsheets');
+    };
+
     // Helper function to convert YouTube URL to embed format
     const convertToYouTubeEmbed = (url: string) => {
         if (!isYouTubeUrl(url)) return url;
@@ -37,6 +47,28 @@ const TextEditor = () => {
         }
 
         return url;
+    };
+
+    // Helper function to convert Google Slides URL to embed format
+    const convertToGoogleSlidesEmbed = (url: string) => {
+        if (!isGoogleSlidesUrl(url)) return url;
+
+        if (url.includes('/presentation/d/')) {
+            const presentationId = url.split('/presentation/d/')[1].split('/')[0];
+            return `https://docs.google.com/presentation/d/${presentationId}/embed?start=false&loop=false&delayms=3000`;
+        }
+        return url; // Return as-is if already in embed format
+    };
+
+    // Helper function to convert Google Sheets URL to embed format
+    const convertToGoogleSheetsEmbed = (url: string) => {
+        if (!isGoogleSheetsUrl(url)) return url;
+
+        if (url.includes('/spreadsheets/d/')) {
+            const spreadsheetId = url.split('/spreadsheets/d/')[1].split('/')[0];
+            return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit?usp=sharing`;
+        }
+        return url; // Return as-is if already in embed format
     };
 
     const renderContent = () => {
@@ -67,6 +99,42 @@ const TextEditor = () => {
                             title="YouTube Video"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
+                        />
+                    </div>
+                </div>
+            );
+        }
+
+        // Handle Google Slides content
+        if (contentType === 'google_slides' || isGoogleSlidesUrl(content)) {
+            const embedUrl = convertToGoogleSlidesEmbed(content);
+            return (
+                <div className="w-full h-full flex items-center justify-center bg-gray-50" style={{ minHeight: '800px' }}>
+                    <div className="w-full max-w-6xl aspect-video">
+                        <iframe
+                            loading="lazy"
+                            className="w-full h-full border-0 rounded-lg shadow-lg"
+                            src={embedUrl}
+                            title="Google Slides Presentation"
+                            allow="fullscreen"
+                        />
+                    </div>
+                </div>
+            );
+        }
+
+        // Handle Google Sheets content
+        if (contentType === 'google_sheets' || isGoogleSheetsUrl(content)) {
+            const embedUrl = convertToGoogleSheetsEmbed(content);
+            return (
+                <div className="w-full h-full flex items-center justify-center bg-gray-50" style={{ minHeight: '800px' }}>
+                    <div className="w-full max-w-6xl" style={{ height: '800px' }}>
+                        <iframe
+                            loading="lazy"
+                            className="w-full h-full border-0 rounded-lg shadow-lg"
+                            src={embedUrl}
+                            title="Google Sheets Spreadsheet"
+                            allow="fullscreen"
                         />
                     </div>
                 </div>

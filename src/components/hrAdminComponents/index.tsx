@@ -1,5 +1,6 @@
 export * from './Dashboard';
 export * from './Employees';
+export * from './Instructors';
 export * from './Feedback';
 export * from './Courses';
 export * from './Subjects';
