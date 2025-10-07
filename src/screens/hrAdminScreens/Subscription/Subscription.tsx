@@ -64,7 +64,27 @@ const Subscription: React.FC = () => {
 
     const status = data?.subscription?.status;
     const seatCount = data?.seatCount || 0;
-    const nextBilling = data?.subscription?.currentPeriodEnd ? new Date(data.subscription.currentPeriodEnd).toLocaleString() : 'N/A';
+
+    // Format next billing date in a more humanized way
+    const formatNextBilling = (dateString: string) => {
+        if (!dateString) return { date: 'N/A', daysUntil: 0 };
+
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = date.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Format date as "Nov 2, 2025"
+        const formattedDate = date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+
+        return { date: formattedDate, daysUntil: diffDays };
+    };
+
+    const nextBilling = data?.subscription?.currentPeriodEnd ? formatNextBilling(data.subscription.currentPeriodEnd) : { date: 'N/A', daysUntil: 0 };
 
     return (
         <div className="flex flex-row w-screen h-screen max-w-[2200px] justify-center items-center mx-auto bg-mainBg flex-wrap">
@@ -101,7 +121,14 @@ const Subscription: React.FC = () => {
                                 </div>
                                 <div className="p-4 border border-gray-100 rounded-lg bg-gray-50">
                                     <p className="text-sm text-gray-600">Next Billing</p>
-                                    <p className="text-lg font-semibold text-gray-900 mt-1">{nextBilling}</p>
+                                    <p className="text-lg font-semibold text-gray-900 mt-1">
+                                        {nextBilling.date}
+                                        {nextBilling.daysUntil > 0 && (
+                                            <span className="text-sm text-gray-500 ml-1">
+                                                ({nextBilling.daysUntil === 1 ? 'Tomorrow' : `${nextBilling.daysUntil} days`})
+                                            </span>
+                                        )}
+                                    </p>
                                 </div>
                             </div>
                         )}
