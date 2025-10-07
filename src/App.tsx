@@ -30,6 +30,9 @@ const SoloQuiz = lazy(() => import("./screens/employeeScreens/SoloQuiz").then(mo
 const QuizResult = lazy(() => import("./screens/employeeScreens/QuizResult").then(module => ({ default: module.QuizResult })));
 const EmployeeResultScreen = lazy(() => import("./screens/employeeScreens/Result").then(module => ({ default: module.StudentResult })));
 const Discussion = lazy(() => import("./screens/Discussion/Discussion"));
+const DiscussionSubjects = lazy(() => import("./screens/Discussion/DiscussionSubjects"));
+const DiscussionTopics = lazy(() => import("./screens/Discussion/DiscussionTopics"));
+const DiscussionLessons = lazy(() => import("./screens/Discussion/DiscussionLessons"));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -184,6 +187,21 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path={RouteName.DISCUSSION} element={
+            <ProtectedRoute>
+              <DiscussionSubjects />
+            </ProtectedRoute>
+          } />
+          <Route path={RouteName.DISCUSSION_SUBJECT} element={
+            <ProtectedRoute>
+              <DiscussionTopics />
+            </ProtectedRoute>
+          } />
+          <Route path={RouteName.DISCUSSION_TOPIC} element={
+            <ProtectedRoute>
+              <DiscussionLessons />
+            </ProtectedRoute>
+          } />
+          <Route path={RouteName.DISCUSSION_LESSON} element={
             <ProtectedRoute>
               <Discussion />
             </ProtectedRoute>

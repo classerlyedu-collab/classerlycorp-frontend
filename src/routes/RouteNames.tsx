@@ -12,6 +12,9 @@ export const RouteName = {
     CALENDAR_SCREEN: '/Calendar',
     EMPLOYEE_RESULT_SCREEN: '/MyEmployees/Employee_Result',
     DISCUSSION: '/Discussion',
+    DISCUSSION_SUBJECT: '/Discussion/:subjectId',
+    DISCUSSION_TOPIC: '/Discussion/:subjectId/:topicId',
+    DISCUSSION_LESSON: '/Discussion/:subjectId/:topicId/:lessonId',
 
     // HR-Admin
     DASHBOARD_SCREEN_HR_ADMIN: '/Dashboard_HR_Admin',

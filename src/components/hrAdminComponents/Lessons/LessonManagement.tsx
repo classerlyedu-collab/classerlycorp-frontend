@@ -367,6 +367,12 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
                         setLessons(prev => [...response.data, ...prev]);
                     } else if (response.data) {
                         setLessons(prev => [response.data, ...prev]);
+
+                        // Update selectedTopic with proper subject information if available
+                        if (response.data.topic && response.data.topic.subject && response.data.topic.subject.name) {
+                            // The backend now returns properly populated subject data
+                            // No need to update selectedTopic as it should already have the correct data
+                        }
                     }
                 }
             } else {

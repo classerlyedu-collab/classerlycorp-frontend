@@ -1,50 +1,56 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Navbar, SideDrawer } from '../../components';
 import { Get, Post, Put, Delete } from '../../config/apiMethods';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { RouteName } from '../../routes/RouteNames';
 import { displayMessage } from '../../config';
-import { UseStateContext } from '../../context/ContextProvider';
 
-interface FeedItem {
+interface Thread {
+    _id: string;
+    title: string;
+    message: string;
+    lesson: { _id: string; name: string };
+    subject: { _id: string; name: string };
+    topic: { _id: string; name: string };
+    createdBy: { _id: string; fullName: string; image?: string };
+    messages: Message[];
+    createdAt: string;
+}
+
+interface Message {
     _id: string;
     text: string;
-    sender: any;
+    sender: { _id: string; fullName: string; image?: string };
+    parent?: Message;
     createdAt: string;
-    thread: { _id: string; title: string; subject?: any; topic?: any; lesson?: any };
-    parent?: { _id: string };
-    createdBy?: string; // For author checks
 }
 
 const Discussion: React.FC = () => {
-    const { role } = UseStateContext();
-    const token = useMemo(() => localStorage.getItem('token') || '', []);
 
-    const [feed, setFeed] = useState<FeedItem[]>([]);
+    const [threads, setThreads] = useState<Thread[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Composer state
+    const [role, setRole] = useState<string | null>(null);
+    const [lesson, setLesson] = useState<any>(null);
+    const [topic, setTopic] = useState<any>(null);
+    const [subject, setSubject] = useState<any>(null);
+    const [showComposer, setShowComposer] = useState(false);
     const [title, setTitle] = useState('');
     const [text, setText] = useState('');
-    const [subject, setSubject] = useState<string | null>(null);
-    const [topic, setTopic] = useState<string | null>(null);
-    const [lesson, setLesson] = useState<string | null>(null);
-    const [subjects, setSubjects] = useState<any[]>([]);
-    const [topics, setTopics] = useState<any[]>([]);
-    const [lessons, setLessons] = useState<any[]>([]);
     const [creating, setCreating] = useState(false);
-    const [showComposer, setShowComposer] = useState(false);
-    const [editing, setEditing] = useState(false);
-    // Feed UX enhancements
-    const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({});
-
-    // Edit/Delete state
-    const [editingItem, setEditingItem] = useState<string | null>(null);
-    const [editText, setEditText] = useState('');
-    const [showDropdown, setShowDropdown] = useState<string | null>(null);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editingThread, setEditingThread] = useState<any>(null);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<FeedItem | null>(null);
+    const [editingThread, setEditingThread] = useState<string | null>(null);
+    const [editingMessage, setEditingMessage] = useState<string | null>(null);
+    const [replyToMessage, setReplyToMessage] = useState<string | null>(null);
+    const [replyText, setReplyText] = useState('');
+    const [replying, setReplying] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<{ type: 'thread' | 'message', id: string, title?: string } | null>(null);
+
+
+
+    const { subjectId, topicId, lessonId } = useParams<{ subjectId: string; topicId: string; lessonId: string }>();
+    const navigate = useNavigate();
 
     const canCreate = title.trim().length > 0 && text.trim().length > 0;
     const currentUserId = useMemo(() => {
@@ -52,1062 +58,1028 @@ const Discussion: React.FC = () => {
         return user?._id || user?.id;
     }, []);
 
-    const loadFeed = () => {
-        setLoading(true);
-        Get('/discussions/feed')
-            .then((d) => {
-                if (d.success) setFeed(Array.isArray(d.data) ? d.data : []);
-                else displayMessage(d.message || 'Failed to load feed', 'error');
-            })
-            .catch(() => displayMessage('Failed to load feed', 'error'))
-            .finally(() => setLoading(false));
-    };
 
-    useEffect(() => { loadFeed(); }, []);
+    useEffect(() => {
+        const ctxUser = JSON.parse(localStorage.getItem('user') || '{}');
+        setRole(ctxUser?.userType || null);
+    }, []);
+
+    useEffect(() => {
+        if (!role || !lessonId) return;
+        // Always load threads on initial load (when lessonId changes)
+        loadThreads();
+        loadLessonDetails();
+    }, [role, lessonId]);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
             if (!target.closest('.dropdown-container')) {
-                setShowDropdown(null);
+                const dropdowns = document.querySelectorAll('.dropdown-container .absolute');
+                dropdowns.forEach(dropdown => {
+                    if (!dropdown.classList.contains('hidden')) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
             }
         };
+
         document.addEventListener('click', handleClickOutside);
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    // Lightweight polling to keep feed fresh without sockets
-    useEffect(() => {
-        const id = window.setInterval(() => {
-            Get('/discussions/feed').then((d) => {
-                if (d.success) setFeed(Array.isArray(d.data) ? d.data : []);
-            }).catch(() => { });
-        }, 15000);
-        return () => window.clearInterval(id);
-    }, []);
+    const loadThreads = () => {
+        if (!lessonId) return;
+        setLoading(true);
 
-    // Load subject list for HR-Admin/Employee when needed
-    useEffect(() => {
-        if (role === 'HR-Admin') {
-            Get('/hr-admin/mysubjects').then((d) => {
-                if (d.success) setSubjects(d.data || []);
-            }).catch(() => { });
-        } else if (role === 'Employee') {
-            Get('/employee/mysubjects').then((d) => {
-                if (d.success) setSubjects(d.data || []);
-            }).catch(() => { });
-        }
-    }, [role]);
+        Get(`/discussions/lessons/${lessonId}/threads`)
+            .then((d) => {
+                if (d.success) {
+                    const threadData = Array.isArray(d.data) ? d.data : [];
+                    // Ensure each thread has a messages array
+                    const threadsWithMessages = threadData.map((thread: any) => ({
+                        ...thread,
+                        messages: thread.messages || []
+                    }));
+                    setThreads(threadsWithMessages);
+                } else {
+                    displayMessage(d.message || 'Failed to load discussions', 'error');
+                }
+            })
+            .catch(() => displayMessage('Failed to load discussions', 'error'))
+            .finally(() => setLoading(false));
+    };
 
-    useEffect(() => {
-        if (subject) {
-            Get(`/topic/simple/subject/${subject}`).then((d) => {
-                if (d.success) setTopics(d.data || []); else setTopics([]);
-            }).catch(() => setTopics([]));
-        } else {
-            setTopics([]);
-            setTopic(null);
-            setLessons([]);
-            setLesson(null);
-        }
-    }, [subject]);
-
-    useEffect(() => {
-        if (topic) {
-            Get(`/topic/lesson/simple/${topic}`).then((d) => {
-                if (d.success) setLessons(d.data || []); else setLessons([]);
-            }).catch(() => setLessons([]));
-        } else {
-            setLessons([]);
-            setLesson(null);
-        }
-    }, [topic]);
-
-    const createPost = async () => {
-        if (!canCreate) return;
-        setCreating(true);
-
-        // optimistic add at top
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        const optimisticId = `tmp-${Date.now()}`;
-        const optimistic: FeedItem = {
-            _id: optimisticId,
-            text: text.trim(),
-            sender: { fullName: currentUser?.fullName, image: currentUser?.image },
-            createdAt: new Date().toISOString(),
-            thread: {
-                _id: '',
-                title: title.trim(),
-                subject: subjects.find(s => s._id === subject),
-                topic: topics.find(t => t._id === topic),
-                lesson: lessons.find(l => l._id === lesson)
-            }
-        } as any;
-        setFeed(prev => [optimistic, ...prev]);
+    const loadLessonDetails = async () => {
+        if (!subjectId || !topicId || !lessonId) return;
 
         try {
-            const response = await Post('/discussions/threads', {
-                title: title.trim(),
-                text: text.trim(),
-                subject: subject || undefined,
-                topic: topic || undefined,
-                lesson: lesson || undefined
-            });
+            // Load subject
+            const subjectRes = await Get('/discussions/subjects');
+            if (subjectRes.success) {
+                const subjectData = subjectRes.data?.find((s: any) => s._id === subjectId);
+                setSubject(subjectData || null);
+            }
 
-            if (response.success) {
-                setTitle('');
-                setText('');
-                setSubject(null);
-                setTopic(null);
-                setLesson(null);
-                setShowComposer(false);
-                // Silent refresh to ensure data consistency
-                Get('/discussions/feed').then((r) => {
-                    if (r.success) setFeed(Array.isArray(r.data) ? r.data : []);
-                }).catch(() => { });
-            } else {
-                displayMessage(response.message || 'Failed to post', 'error');
-                // Rollback on error
-                setFeed(prev => prev.filter(i => i._id !== optimisticId));
+            // Load topic
+            const topicRes = await Get(`/discussions/subjects/${subjectId}/topics`);
+            if (topicRes.success) {
+                const topicData = topicRes.data?.find((t: any) => t._id === topicId);
+                setTopic(topicData || null);
+            }
+
+            // Load lesson
+            const lessonRes = await Get(`/discussions/topics/${topicId}/lessons`);
+            if (lessonRes.success) {
+                const lessonData = lessonRes.data?.find((l: any) => l._id === lessonId);
+                setLesson(lessonData || null);
             }
         } catch (error) {
-            displayMessage('Failed to post', 'error');
-            // Rollback on error
-            setFeed(prev => prev.filter(i => i._id !== optimisticId));
+            console.error('Failed to load lesson details:', error);
+        }
+    };
+
+    const createThread = async () => {
+        if (!canCreate || !lessonId) return;
+        setCreating(true);
+
+        const newThread = {
+            _id: `temp-${Date.now()}`,
+            title: title.trim(),
+            message: text.trim(),
+            lesson: { _id: lessonId, name: lesson?.name || 'Lesson' },
+            subject: { _id: subjectId || '', name: subject?.name || 'Subject' },
+            topic: { _id: topicId || '', name: topic?.name || 'Topic' },
+            createdBy: { _id: currentUserId, fullName: JSON.parse(localStorage.getItem('user') || '{}')?.fullName || 'You' },
+            messages: [],
+            createdAt: new Date().toISOString()
+        };
+
+        // Add optimistically
+        setThreads(prev => [newThread, ...prev]);
+        setTitle('');
+        setText('');
+        setShowComposer(false);
+
+        try {
+            const res = await Post(`/discussions/lessons/${lessonId}/threads`, {
+                title: newThread.title,
+                text: newThread.message
+            });
+
+            if (res.success) {
+                // Replace temp thread with real one, ensuring messages array exists
+                const realThread = {
+                    ...res.data,
+                    messages: res.data.messages || []
+                };
+                setThreads(prev => prev.map(thread =>
+                    thread._id === newThread._id ? realThread : thread
+                ));
+                displayMessage('Discussion created successfully', 'success');
+            } else {
+                // Remove on error
+                setThreads(prev => prev.filter(thread => thread._id !== newThread._id));
+                displayMessage(res.message || 'Failed to create discussion', 'error');
+            }
+        } catch (error) {
+            // Remove on error
+            setThreads(prev => prev.filter(thread => thread._id !== newThread._id));
+            displayMessage('Failed to create discussion', 'error');
         } finally {
             setCreating(false);
         }
     };
 
-    // Reply support
-    const [replyText, setReplyText] = useState('');
-    const [replyToId, setReplyToId] = useState<string | null>(null);
+    const createMessage = async (threadId: string, parentId?: string) => {
+        if (!replyText.trim()) return;
+        setReplying(true);
 
-    const startReply = (postId: string) => {
-        setReplyToId(postId);
-        setReplyText('');
-
-        // Auto-scroll to reply input after a short delay to ensure it's rendered
-        setTimeout(() => {
-            const replyInput = document.getElementById(`reply-input-${postId}`);
-            if (replyInput) {
-                // Get the element's position relative to the viewport
-                const elementRect = replyInput.getBoundingClientRect();
-                const absoluteElementTop = elementRect.top + window.pageYOffset;
-                const middle = absoluteElementTop - (window.innerHeight / 2);
-
-                // Smooth scroll to the element
-                window.scrollTo({
-                    top: middle,
-                    behavior: 'smooth'
-                });
-
-                // Focus the input after scrolling completes
-                setTimeout(() => {
-                    const input = replyInput.querySelector('input');
-                    if (input) {
-                        input.focus();
-                    }
-                }, 500); // Wait for scroll animation to complete
-            }
-        }, 150);
-    };
-
-    const sendReply = (post: FeedItem) => {
-        if (!replyText.trim() || !post?.thread?._id) return;
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        const body = { text: replyText.trim(), parent: post._id } as any;
-
-        // optimistic insert after parent
-        const optimistic: FeedItem = {
-            _id: `tmp-r-${Date.now()}`,
+        const newMessage = {
+            _id: `temp-msg-${Date.now()}`,
             text: replyText.trim(),
-            sender: { fullName: currentUser?.fullName, image: currentUser?.image },
-            createdAt: new Date().toISOString(),
-            thread: post.thread,
-            parent: { _id: post._id }
-        } as any;
+            sender: { _id: currentUserId, fullName: JSON.parse(localStorage.getItem('user') || '{}')?.fullName || 'You' },
+            parent: parentId ? { _id: parentId } as any : undefined,
+            createdAt: new Date().toISOString()
+        };
 
-        setReplyText('');
-        setReplyToId(null);
-        setFeed(prev => {
-            // place reply right after last existing reply of this parent
-            const copy = prev.slice();
-            const parentIndex = copy.findIndex(i => i._id === post._id);
-            if (parentIndex === -1) return prev;
-            // find subsequent items that are replies to this parent
-            let insertIndex = parentIndex + 1;
-            while (insertIndex < copy.length && copy[insertIndex]?.parent?._id === post._id) {
-                insertIndex++;
-            }
-            copy.splice(insertIndex, 0, optimistic);
-            return copy;
-        });
-
-        Post(`/discussions/threads/${post.thread._id}/messages`, body)
-            .then((d) => {
-                if (!d.success) {
-                    displayMessage(d.message || 'Failed to reply', 'error');
-                    Get('/discussions/feed').then((r) => {
-                        if (r.success) setFeed(Array.isArray(r.data) ? r.data : []);
-                    }).catch(() => { });
-                } else {
-                    Get('/discussions/feed').then((r) => {
-                        if (r.success) setFeed(Array.isArray(r.data) ? r.data : []);
-                    }).catch(() => { });
-                }
-            })
-            .catch(() => {
-                displayMessage('Failed to reply', 'error');
-                Get('/discussions/feed').then((r) => {
-                    if (r.success) setFeed(Array.isArray(r.data) ? r.data : []);
-                }).catch(() => { });
-            });
-    };
-
-    // CRUD functions
-    const isAuthor = (item: FeedItem) => {
-        return item.createdBy === currentUserId || item.sender?._id === currentUserId;
-    };
-
-    const startEdit = (item: FeedItem) => {
-        // Only allow inline editing for replies (items with parent)
-        if (item.parent) {
-            setEditingItem(item._id);
-            setEditText(item.text);
-            setShowDropdown(null);
-        }
-    };
-
-    const cancelEdit = () => {
-        setEditingItem(null);
-        setEditText('');
-    };
-
-    const saveEdit = async (item: FeedItem) => {
-        if (!editText.trim()) return;
-
-        // Only handle replies here (items with parent)
-        const endpoint = `/discussions/messages/${item._id}`;
-        const body = { text: editText.trim() };
-
-        // Optimistic update
-        setFeed(prev => prev.map(f =>
-            f._id === item._id
-                ? { ...f, text: editText.trim() }
-                : f
+        // Add optimistically
+        setThreads(prev => prev.map(thread =>
+            thread._id === threadId
+                ? { ...thread, messages: [...thread.messages, newMessage] }
+                : thread
         ));
+        setReplyText('');
+        setReplyToMessage(null);
 
         try {
-            const response = await Put(endpoint, body);
-            if (!response.success) {
-                displayMessage(response.message || 'Failed to update', 'error');
-                // Rollback
-                loadFeed();
+            const res = await Post(`/discussions/threads/${threadId}/messages`, {
+                text: newMessage.text,
+                parentId: parentId || null
+            });
+
+            if (res.success) {
+                // Replace temp message with real one
+                setThreads(prev => prev.map(thread =>
+                    thread._id === threadId
+                        ? {
+                            ...thread, messages: thread.messages.map(msg =>
+                                msg._id === newMessage._id ? res.data : msg
+                            )
+                        }
+                        : thread
+                ));
+                displayMessage('Reply posted successfully', 'success');
+            } else {
+                // Remove on error
+                setThreads(prev => prev.map(thread =>
+                    thread._id === threadId
+                        ? { ...thread, messages: thread.messages.filter(msg => msg._id !== newMessage._id) }
+                        : thread
+                ));
+                displayMessage(res.message || 'Failed to post reply', 'error');
             }
         } catch (error) {
-            displayMessage('Failed to update', 'error');
-            loadFeed();
+            // Remove on error
+            setThreads(prev => prev.map(thread =>
+                thread._id === threadId
+                    ? { ...thread, messages: thread.messages.filter(msg => msg._id !== newMessage._id) }
+                    : thread
+            ));
+            displayMessage('Failed to post reply', 'error');
+        } finally {
+            setReplying(false);
+        }
+    };
+
+    const updateThread = async (threadId: string) => {
+        if (!title.trim()) return;
+        setCreating(true);
+
+        // Update optimistically
+        setThreads(prev => prev.map(thread =>
+            thread._id === threadId
+                ? { ...thread, title: title.trim(), message: text.trim() }
+                : thread
+        ));
+        setTitle('');
+        setText('');
+        setEditingThread(null);
+        setShowComposer(false);
+
+        try {
+            const res = await Put(`/discussions/threads/${threadId}`, {
+                title: title.trim(),
+                message: text.trim()
+            });
+
+            if (res.success) {
+                // Update with real data, ensuring messages array exists
+                const updatedThread = {
+                    ...res.data,
+                    messages: res.data.messages || []
+                };
+                setThreads(prev => prev.map(thread =>
+                    thread._id === threadId ? updatedThread : thread
+                ));
+                displayMessage('Discussion updated successfully', 'success');
+            } else {
+                // Revert on error
+                loadThreads();
+                displayMessage(res.message || 'Failed to update discussion', 'error');
+            }
+        } catch (error) {
+            // Revert on error
+            loadThreads();
+            displayMessage('Failed to update discussion', 'error');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const updateMessage = async (messageId: string) => {
+        if (!replyText.trim()) return;
+        setReplying(true);
+
+        // Check if this is a thread message (editing the initial post)
+        const thread = threads.find(t => t._id === messageId);
+        if (thread) {
+            // Update thread message optimistically
+            setThreads(prev => prev.map(t =>
+                t._id === messageId
+                    ? { ...t, message: replyText.trim() }
+                    : t
+            ));
+        } else {
+            // Update regular message optimistically
+            setThreads(prev => prev.map(t => ({
+                ...t,
+                messages: t.messages.map(msg =>
+                    msg._id === messageId
+                        ? { ...msg, text: replyText.trim() }
+                        : msg
+                )
+            })));
         }
 
-        setEditingItem(null);
-        setEditText('');
+        setReplyText('');
+        setEditingMessage(null);
+
+        try {
+            if (thread) {
+                // Update thread message
+                const res = await Put(`/discussions/threads/${messageId}`, {
+                    message: replyText.trim()
+                });
+
+                if (res.success) {
+                    // Update with real data, ensuring messages array exists
+                    const updatedThread = {
+                        ...res.data,
+                        messages: res.data.messages || []
+                    };
+                    setThreads(prev => prev.map(t =>
+                        t._id === messageId ? updatedThread : t
+                    ));
+                    displayMessage('Thread updated successfully', 'success');
+                } else {
+                    // Revert on error
+                    loadThreads();
+                    displayMessage(res.message || 'Failed to update thread message', 'error');
+                }
+            } else {
+                // Update regular message
+                const res = await Put(`/discussions/messages/${messageId}`, {
+                    text: replyText.trim()
+                });
+
+                if (res.success) {
+                    // Update with real data
+                    setThreads(prev => prev.map(t => ({
+                        ...t,
+                        messages: t.messages.map(msg =>
+                            msg._id === messageId ? res.data : msg
+                        )
+                    })));
+                    displayMessage('Message updated successfully', 'success');
+                } else {
+                    // Revert on error
+                    loadThreads();
+                    displayMessage(res.message || 'Failed to update message', 'error');
+                }
+            }
+        } catch (error) {
+            // Revert on error
+            loadThreads();
+            displayMessage('Failed to update message', 'error');
+        } finally {
+            setReplying(false);
+        }
     };
 
-    const confirmDelete = (item: FeedItem) => {
-        setItemToDelete(item);
-        setShowDeleteModal(true);
-        setShowDropdown(null);
-    };
-
-    const deleteItem = async () => {
-        if (!itemToDelete) return;
-
+    const deleteThread = async (threadId: string) => {
         setDeleting(true);
 
-        const isThread = !itemToDelete.parent;
-        const endpoint = isThread
-            ? `/discussions/threads/${itemToDelete.thread._id}`
-            : `/discussions/messages/${itemToDelete._id}`;
-
-        // Optimistic update
-        setFeed(prev => prev.filter(f => f._id !== itemToDelete._id));
+        // Remove optimistically
+        setThreads(prev => prev.filter(thread => thread._id !== threadId));
 
         try {
-            const response = await Delete(endpoint);
-            if (!response.success) {
-                displayMessage(response.message || 'Failed to delete', 'error');
-                // Rollback
-                loadFeed();
+            const res = await Delete(`/discussions/threads/${threadId}`);
+
+            if (res.success) {
+                displayMessage('Discussion deleted successfully', 'success');
+            } else {
+                // Revert on error
+                loadThreads();
+                displayMessage(res.message || 'Failed to delete discussion', 'error');
             }
         } catch (error) {
-            displayMessage('Failed to delete', 'error');
-            loadFeed();
+            // Revert on error
+            loadThreads();
+            displayMessage('Failed to delete discussion', 'error');
         } finally {
             setDeleting(false);
-            setShowDeleteModal(false);
-            setItemToDelete(null);
         }
     };
 
-    const startEditThread = (thread: any) => {
-        setEditingThread(thread);
-        setTitle(thread.title);
-        // Find the first post in this thread to get the text content
-        const firstPost = feed.find(f => f.thread?._id === thread._id && !f.parent);
-        setText(firstPost?.text || '');
-        setSubject(thread.subject?._id || null);
-        setTopic(thread.topic?._id || null);
-        setLesson(thread.lesson?._id || null);
-        setShowEditModal(true);
-        setShowDropdown(null);
-    };
+    const deleteMessage = async (messageId: string) => {
+        setDeleting(true);
 
-    const saveEditThread = async () => {
-        if (!editingThread || !title.trim() || !text.trim()) return;
-
-        setEditing(true);
-
-        // Optimistic update for thread title and subject/topic/lesson
-        setFeed(prev => prev.map(f =>
-            f.thread?._id === editingThread._id
-                ? {
-                    ...f,
-                    thread: {
-                        ...f.thread,
-                        title: title.trim(),
-                        subject: subjects.find(s => s._id === subject),
-                        topic: topics.find(t => t._id === topic),
-                        lesson: lessons.find(l => l._id === lesson)
-                    }
-                }
-                : f
-        ));
-
-        // Optimistic update for the first post text
-        setFeed(prev => prev.map(f =>
-            f.thread?._id === editingThread._id && !f.parent
-                ? { ...f, text: text.trim() }
-                : f
-        ));
+        // Remove optimistically
+        setThreads(prev => prev.map(thread => ({
+            ...thread,
+            messages: thread.messages.filter(msg => msg._id !== messageId)
+        })));
 
         try {
-            // Update thread
-            const threadResponse = await Put(`/discussions/threads/${editingThread._id}`, {
-                title: title.trim(),
-                subject: subject || undefined,
-                topic: topic || undefined,
-                lesson: lesson || undefined
-            });
+            const res = await Delete(`/discussions/messages/${messageId}`);
 
-            // Update the first post text
-            const firstPost = feed.find(f => f.thread?._id === editingThread._id && !f.parent);
-            if (firstPost) {
-                await Put(`/discussions/messages/${firstPost._id}`, {
-                    text: text.trim()
-                });
-            }
-
-            if (threadResponse.success) {
-                setShowEditModal(false);
-                setEditingThread(null);
-                setTitle('');
-                setText('');
-                setSubject(null);
-                setTopic(null);
-                setLesson(null);
-                // Silent refresh to ensure data consistency
-                Get('/discussions/feed').then((r) => {
-                    if (r.success) setFeed(Array.isArray(r.data) ? r.data : []);
-                }).catch(() => { });
+            if (res.success) {
+                displayMessage('Message deleted successfully', 'success');
             } else {
-                displayMessage(threadResponse.message || 'Failed to update thread', 'error');
-                // Rollback on error
-                loadFeed();
+                // Revert on error
+                loadThreads();
+                displayMessage(res.message || 'Failed to delete message', 'error');
             }
         } catch (error) {
-            displayMessage('Failed to update thread', 'error');
-            // Rollback on error
-            loadFeed();
+            // Revert on error
+            loadThreads();
+            displayMessage('Failed to delete message', 'error');
         } finally {
-            setEditing(false);
+            setDeleting(false);
         }
     };
 
-    const renderAvatar = (sender: any) => {
-        const img = sender?.image;
-        const name: string = sender?.fullName || '';
-        if (img) {
-            return <img src={img} alt="avatar" className="w-full h-full object-cover" />
-        }
-        const initial = (name || '?').slice(0, 1).toUpperCase() || '?';
-        return <span>{initial}</span>
-    };
+    const handleReplyClick = (messageId: string) => {
+        setReplyToMessage(messageId);
+        setReplyText('');
+        setEditingMessage(null);
 
-    // Build a grouped/nested view: for each thread, show top-level posts and their replies
-    const grouped = useMemo(() => {
-        // group by thread
-        const threadIdToItems: Record<string, FeedItem[]> = {};
-        for (const item of feed) {
-            const tid = item.thread?._id || 'unknown';
-            if (!threadIdToItems[tid]) threadIdToItems[tid] = [];
-            threadIdToItems[tid].push(item);
-        }
-        // For each thread, build parent -> replies mapping
-        let result = Object.entries(threadIdToItems).map(([threadId, items]) => {
-            const parents = items.filter(i => !i.parent);
-            const repliesMap: Record<string, FeedItem[]> = {};
-            for (const i of items) {
-                if (i.parent?._id) {
-                    if (!repliesMap[i.parent._id]) repliesMap[i.parent._id] = [];
-                    repliesMap[i.parent._id].push(i);
-                }
+        // Smooth scroll to reply input after a short delay
+        setTimeout(() => {
+            const replyInput = document.querySelector(`[data-reply-to="${messageId}"] textarea`);
+            if (replyInput) {
+                replyInput.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+                // Auto-focus the textarea
+                (replyInput as HTMLTextAreaElement).focus();
             }
-            return { threadId, thread: parents[0]?.thread, parents, repliesMap };
-        });
-        // sort threads by latest parent post time (desc)
-        result.sort((a, b) => {
-            const aTime = a.parents[0]?.createdAt ? new Date(a.parents[0].createdAt).getTime() : 0;
-            const bTime = b.parents[0]?.createdAt ? new Date(b.parents[0].createdAt).getTime() : 0;
-            return bTime - aTime;
-        });
-        return result;
-    }, [feed]);
+        }, 100);
+    };
+
+    const handleDeleteClick = (type: 'thread' | 'message', id: string, title?: string) => {
+        setDeleteTarget({ type, id, title });
+        setShowDeleteDialog(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+
+        if (deleteTarget.type === 'thread') {
+            await deleteThread(deleteTarget.id);
+        } else {
+            await deleteMessage(deleteTarget.id);
+        }
+
+        setShowDeleteDialog(false);
+        setDeleteTarget(null);
+    };
+
+    const cancelDelete = () => {
+        setShowDeleteDialog(false);
+        setDeleteTarget(null);
+    };
+
+    const isAuthor = (item: any) => {
+        return item.createdBy?._id === currentUserId || item.sender?._id === currentUserId;
+    };
+
+    const toTitleCase = (str: string) => String(str || '')
+        .toLowerCase()
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
 
     const formatWhen = (iso: string) => {
         try {
             const d = new Date(iso);
-            const diff = Date.now() - d.getTime();
-            const sec = Math.floor(diff / 1000);
-            if (sec < 60) return 'just now';
-            const min = Math.floor(sec / 60);
-            if (min < 60) return `${min}m ago`;
-            const hr = Math.floor(min / 60);
-            if (hr < 24) return `${hr}h ago`;
-            const day = Math.floor(hr / 24);
-            if (day < 7) return `${day}d ago`;
-            return d.toLocaleDateString();
+            return d.toLocaleString();
         } catch {
-            return new Date(iso).toLocaleString();
+            return 'Unknown time';
         }
     };
 
-    return (
-        <>
-            <div className="flex flex-row w-screen h-screen max-w-[2200px] justify-center items-center mx-auto bg-gradient-to-br from-slate-50 to-slate-100 flex-wrap">
-                <div className="lg:w-1/6 h-full bg-transparent transition-all delay-100 flex">
-                    <SideDrawer />
+    const BreadcrumbSkeleton = () => (
+        <div className="mb-4">
+            <nav className="text-sm">
+                <div className="animate-pulse flex items-center gap-2">
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <span className="text-slate-300">/</span>
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <span className="text-slate-300">/</span>
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <span className="text-slate-300">/</span>
+                    <div className="h-4 bg-gray-200 rounded w-16"></div>
                 </div>
+            </nav>
+        </div>
+    );
 
-                <div className="flex flex-col h-screen w-screen lg:w-10/12 px-4 py-6 xl:pr-16 bg-transparent">
-                    <div className="w-full h-fit mb-8 flex">
-                        <Navbar title="Discussion" hideSearchBar />
-                    </div>
-
-                    <div className="max-w-6xl mx-auto w-full">
-                        {/* Premium Header Section */}
-                        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-2xl p-8 mb-8 relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
-                            <div className="relative z-10">
-                                <div className="flex items-center justify-between">
+    const DiscussionSkeleton = () => (
+        <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+                    {/* Thread Post Skeleton */}
+                    <div className="border border-slate-200 rounded-xl p-6 bg-white shadow-sm">
+                        <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0">
+                                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between mb-3">
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-4 mb-4">
-                                            <img
-                                                src="/classerly.net.png"
-                                                alt="Classerly Logo"
-                                                className="h-12 w-auto"
-                                            />
-                                            <div>
-                                                <h1 className="text-3xl font-bold text-white mb-2">Team Discussions</h1>
-                                                <p className="text-slate-300 text-lg">Collaborate privately with your team on subjects, topics, and lessons</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4 text-slate-400">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                                <span className="text-sm">Live discussions</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
-                                                </svg>
-                                                <span className="text-sm">Private & Secure</span>
-                                            </div>
+                                        <div className="animate-pulse">
+                                            <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
                                         </div>
                                     </div>
-                                    <div className="flex-shrink-0">
-                                        <button
-                                            className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3"
-                                            onClick={() => setShowComposer(true)}
-                                        >
-                                            <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                            </svg>
-                                            New Discussion
-                                            <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                        </button>
-                                    </div>
+                                    <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
+                                </div>
+                                <div className="animate-pulse">
+                                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-4/6 mb-4"></div>
+                                </div>
+                                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                                    <div className="h-8 bg-gray-200 rounded-lg w-40 animate-pulse"></div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Discussion Feed */}
-                        <div className="space-y-8">
-                            {loading ? (
-                                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-12 text-center">
-                                    <div className="inline-flex items-center gap-3 text-slate-600">
-                                        <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        <span className="text-lg font-medium">Loading discussions...</span>
+                    {/* Reply Messages Skeleton */}
+                    <div className="ml-6 mt-4 border-l-2 border-slate-200 pl-4 space-y-4">
+                        {[1, 2].map((j) => (
+                            <div key={j} className="bg-slate-50 rounded-lg p-4">
+                                <div className="flex items-start justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 bg-gray-200 rounded-full animate-pulse"></div>
+                                        <div className="animate-pulse">
+                                            <div className="h-4 bg-gray-200 rounded w-24 mb-1"></div>
+                                            <div className="h-3 bg-gray-200 rounded w-16"></div>
+                                        </div>
                                     </div>
+                                    <div className="w-6 h-6 bg-gray-200 rounded animate-pulse"></div>
                                 </div>
-                            ) : grouped.length === 0 ? (
-                                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-12 text-center">
-                                    <div className="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="animate-pulse">
+                                    <div className="h-4 bg-gray-200 rounded w-full mb-1"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+
+    return (
+        <div className="flex flex-row w-screen h-screen max-w-[2200px] justify-center items-center mx-auto bg-gradient-to-br from-slate-50 to-slate-100 flex-wrap">
+            <div className="lg:w-1/6 h-full bg-transparent transition-all delay-100 flex">
+                <SideDrawer />
+            </div>
+            <div className="flex flex-col h-screen w-screen lg:w-10/12 px-4 py-6 xl:pr-16 bg-transparent">
+                <div className="w-full h-fit mb-8 flex">
+                    <Navbar title="Discussion" hideSearchBar />
+                </div>
+
+                <div className="max-w-6xl mx-auto w-full">
+
+
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-2xl p-8 mb-6 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
+                        <div className="relative z-10 flex items-center justify-between">
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">Discussions</h1>
+                                <p className="text-slate-300">Discuss {toTitleCase(lesson?.name || 'this lesson')} with your team</p>
+                            </div>
+                            <button
+                                onClick={() => setShowComposer(true)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
+                            >
+                                Create New Discussion
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Breadcrumbs */}
+                    {loading ? (
+                        <BreadcrumbSkeleton />
+                    ) : (
+                        <div className="mb-4">
+                            <nav className="text-sm text-slate-500">
+                                <Link to={RouteName.DISCUSSION} className="hover:underline">Discussions</Link>
+                                <span className="mx-2">/</span>
+                                <Link to={`/Discussion/${subjectId}`} className="hover:underline">
+                                    {toTitleCase(subject?.name || 'Subject')}
+                                </Link>
+                                <span className="mx-2">/</span>
+                                <Link to={`/Discussion/${subjectId}/${topicId}`} className="hover:underline">
+                                    {toTitleCase(topic?.name || 'Topic')}
+                                </Link>
+                                <span className="mx-2">/</span>
+                                <span className="text-slate-700 font-medium">
+                                    {toTitleCase(lesson?.name || 'Lesson')}
+                                </span>
+                            </nav>
+                        </div>
+                    )}
+
+                    {/* Discussion Feed */}
+                    <div className="space-y-6">
+                        {loading ? (
+                            <DiscussionSkeleton />
+                        ) : threads.length === 0 ? (
+                            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-16 text-center">
+                                <div className="max-w-lg mx-auto">
+                                    {/* Icon */}
+                                    <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-orange-100 to-red-100 rounded-full flex items-center justify-center">
+                                        <svg className="w-12 h-12 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-xl font-semibold text-slate-700 mb-2">No discussions yet</h3>
-                                    <p className="text-slate-500 mb-6">Start the conversation by creating your first discussion</p>
+
+                                    {/* Title */}
+                                    <h3 className="text-2xl font-bold text-slate-800 mb-4">No Discussions Yet</h3>
+
+                                    {/* Description */}
+                                    <p className="text-slate-600 mb-8 leading-relaxed text-lg">
+                                        Be the first to start a discussion about this lesson!
+                                        Share your thoughts, ask questions, or engage with your team.
+                                    </p>
+
+                                    {/* Action Button */}
                                     <button
-                                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                                         onClick={() => setShowComposer(true)}
+                                        className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                                     >
-                                        Create First Discussion
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        Start First Discussion
                                     </button>
                                 </div>
-                            ) : (
-                                grouped.map(group => (
-                                    <div key={group.threadId} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                                        {/* Thread Header */}
-                                        <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-8 py-6 border-b border-slate-200/50">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-3 mb-4">
-                                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                                            </svg>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {threads.map((thread) => (
+                                    <div key={thread._id} className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+                                        {/* Thread Post (Title + Message Combined) */}
+                                        <div className="border border-slate-200 rounded-xl p-6 bg-white shadow-sm">
+                                            <div className="flex items-start gap-4">
+                                                <div className="flex-shrink-0">
+                                                    {thread.createdBy.image ? (
+                                                        <img
+                                                            src={thread.createdBy.image}
+                                                            alt={thread.createdBy.fullName}
+                                                            className="w-10 h-10 rounded-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+                                                            {thread.createdBy.fullName?.charAt(0)?.toUpperCase() || 'U'}
                                                         </div>
-                                                        <div>
-                                                            <h2 className="text-xl font-bold text-slate-800">{group.thread?.title || 'Discussion'}</h2>
-                                                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                                                                <span>Thread</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="flex-1">
+                                                            <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight">
+                                                                {thread.title}
+                                                            </h3>
+                                                            <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+                                                                <span className="font-medium text-slate-700">{thread.createdBy.fullName}</span>
                                                                 <span>•</span>
-                                                                <span>{group.parents.length} {group.parents.length === 1 ? 'post' : 'posts'}</span>
+                                                                <span>{formatWhen(thread.createdAt)}</span>
                                                             </div>
                                                         </div>
+                                                        {isAuthor(thread) && (
+                                                            <div className="relative dropdown-container">
+                                                                <button
+                                                                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                        if (dropdown.classList.contains('hidden')) {
+                                                                            dropdown.classList.remove('hidden');
+                                                                        } else {
+                                                                            dropdown.classList.add('hidden');
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                                                    </svg>
+                                                                </button>
+                                                                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 hidden">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            setTitle(thread.title);
+                                                                            setText(thread.message);
+                                                                            setEditingThread(thread._id);
+                                                                            setShowComposer(true);
+                                                                            // Hide dropdown
+                                                                            const dropdown = e.currentTarget.closest('.dropdown-container')?.querySelector('.absolute') as HTMLElement;
+                                                                            if (dropdown) dropdown.classList.add('hidden');
+                                                                        }}
+                                                                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                        </svg>
+                                                                        Edit Thread
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            handleDeleteClick('thread', thread._id, thread.title);
+                                                                            // Hide dropdown
+                                                                            const dropdown = e.currentTarget.closest('.dropdown-container')?.querySelector('.absolute') as HTMLElement;
+                                                                            if (dropdown) dropdown.classList.add('hidden');
+                                                                        }}
+                                                                        disabled={deleting}
+                                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                        </svg>
+                                                                        Delete Thread
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {group.thread?.subject?.name && (
-                                                            <span className="px-3 py-1.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700 border border-blue-200">
-                                                                {group.thread.subject.name}
-                                                            </span>
-                                                        )}
-                                                        {group.thread?.topic?.name && (
-                                                            <span className="px-3 py-1.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
-                                                                {group.thread.topic.name}
-                                                            </span>
-                                                        )}
-                                                        {group.thread?.lesson?.name && (
-                                                            <span className="px-3 py-1.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                                                {group.thread.lesson.name}
-                                                            </span>
-                                                        )}
+                                                    <div className="prose prose-slate max-w-none">
+                                                        <p className="text-slate-700 leading-relaxed text-base mb-4">
+                                                            {thread.message}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                                                        <button
+                                                            onClick={() => handleReplyClick(thread._id)}
+                                                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                                            </svg>
+                                                            Reply to this discussion
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                {/* Thread menu - only show for author */}
-                                                {group.parents[0] && isAuthor(group.parents[0]) && (
-                                                    <div className="relative dropdown-container">
-                                                        <button
-                                                            className="p-3 text-slate-500 hover:text-slate-700 hover:bg-white/50 rounded-xl transition-all duration-200"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setShowDropdown(showDropdown === group.threadId ? null : group.threadId);
-                                                            }}
-                                                        >
-                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                            </svg>
-                                                        </button>
-                                                        {showDropdown === group.threadId && (
-                                                            <div className="absolute right-0 top-12 bg-white border border-slate-200 rounded-xl shadow-2xl z-20 min-w-[160px] py-2 overflow-hidden">
-                                                                <button
-                                                                    className="w-full px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                                                                    onClick={() => startEditThread(group.thread)}
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                    </svg>
-                                                                    Edit Thread
-                                                                </button>
-                                                                <button
-                                                                    className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
-                                                                    onClick={() => confirmDelete(group.parents[0])}
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                    </svg>
-                                                                    Delete Thread
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Posts Section */}
-                                        <div className="divide-y divide-slate-100">
-                                            {group.parents.map(parent => (
-                                                <div key={parent._id} className="p-8 hover:bg-slate-50/50 transition-colors">
-                                                    <div className="flex items-start gap-4">
-                                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-200 to-slate-300 overflow-hidden flex items-center justify-center text-sm font-bold text-slate-700 shadow-lg">
-                                                            {renderAvatar(parent.sender)}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-3 mb-3">
-                                                                <span className="font-bold text-slate-800 text-lg">{parent.sender?.fullName || 'User'}</span>
-                                                                <span className="text-slate-500 text-sm">•</span>
-                                                                <span className="text-slate-500 text-sm">{formatWhen(parent.createdAt)}</span>
-                                                            </div>
-                                                            <div className="text-slate-700 text-base leading-relaxed whitespace-pre-wrap mb-4">{parent.text}</div>
-
-                                                            {/* Reply count */}
-                                                            <div className="flex items-center gap-4 mb-6">
-                                                                <div className="flex items-center gap-2 text-slate-500 text-sm">
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                                                    </svg>
-                                                                    <span>{(group.repliesMap[parent._id]?.length || 0)} {(group.repliesMap[parent._id]?.length || 0) === 1 ? 'reply' : 'replies'}</span>
-                                                                </div>
-                                                                <button
-                                                                    className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1 transition-colors"
-                                                                    onClick={() => startReply(parent._id)}
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                                                                    </svg>
-                                                                    Reply
-                                                                </button>
-                                                            </div>
-
-                                                            {/* Replies Section */}
-                                                            {(() => {
-                                                                const repliesRaw = group.repliesMap[parent._id] || [];
-                                                                const replies = repliesRaw.slice().sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-                                                                const open = !!openReplies[parent._id];
-                                                                const shown = open ? replies : replies.slice(0, 2);
-                                                                if (replies.length === 0) return null;
-                                                                return (
-                                                                    <div className="ml-6 pl-6 border-l-2 border-slate-200 space-y-6">
-                                                                        {shown.map((rep: FeedItem) => (
-                                                                            <div key={rep._id} className="bg-slate-50/50 rounded-xl p-6 hover:bg-slate-100/50 transition-colors">
-                                                                                <div className="flex items-start gap-3">
-                                                                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-300 to-slate-400 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-700">
-                                                                                        {renderAvatar(rep.sender)}
-                                                                                    </div>
-                                                                                    <div className="flex-1 min-w-0">
-                                                                                        <div className="flex items-center justify-between mb-2">
-                                                                                            <div className="flex items-center gap-2">
-                                                                                                <span className="font-semibold text-slate-800">{rep.sender?.fullName || 'User'}</span>
-                                                                                                <span className="text-slate-500 text-xs">•</span>
-                                                                                                <span className="text-slate-500 text-xs">{formatWhen(rep.createdAt)}</span>
-                                                                                            </div>
-                                                                                            {/* Reply menu - only show for author */}
-                                                                                            {isAuthor(rep) && (
-                                                                                                <div className="relative dropdown-container">
-                                                                                                    <button
-                                                                                                        className="p-2 text-slate-500 hover:text-slate-700 hover:bg-white/50 rounded-lg transition-all duration-200"
-                                                                                                        onClick={(e) => {
-                                                                                                            e.stopPropagation();
-                                                                                                            setShowDropdown(showDropdown === rep._id ? null : rep._id);
-                                                                                                        }}
-                                                                                                    >
-                                                                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                                                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                                                                        </svg>
-                                                                                                    </button>
-                                                                                                    {showDropdown === rep._id && (
-                                                                                                        <div className="absolute right-0 top-10 bg-white border border-slate-200 rounded-xl shadow-2xl z-20 min-w-[140px] py-2 overflow-hidden">
-                                                                                                            <button
-                                                                                                                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-                                                                                                                onClick={() => startEdit(rep)}
-                                                                                                            >
-                                                                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                                                                </svg>
-                                                                                                                Edit Reply
-                                                                                                            </button>
-                                                                                                            <button
-                                                                                                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-                                                                                                                onClick={() => confirmDelete(rep)}
-                                                                                                            >
-                                                                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                                                                </svg>
-                                                                                                                Delete Reply
-                                                                                                            </button>
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
-                                                                                        {/* Inline editing for replies */}
-                                                                                        {editingItem === rep._id ? (
-                                                                                            <div className="space-y-3">
-                                                                                                <textarea
-                                                                                                    className="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                                                                                    rows={3}
-                                                                                                    value={editText}
-                                                                                                    onChange={(e) => setEditText(e.target.value)}
-                                                                                                />
-                                                                                                <div className="flex gap-3">
-                                                                                                    <button
-                                                                                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition-colors"
-                                                                                                        onClick={() => saveEdit(rep)}
-                                                                                                    >
-                                                                                                        Save
-                                                                                                    </button>
-                                                                                                    <button
-                                                                                                        className="px-4 py-2 border border-slate-300 text-slate-700 text-sm rounded-lg font-medium hover:bg-slate-50 transition-colors"
-                                                                                                        onClick={cancelEdit}
-                                                                                                    >
-                                                                                                        Cancel
-                                                                                                    </button>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        ) : (
-                                                                                            <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{rep.text}</div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                        {replies.length > 2 && (
-                                                                            <button
-                                                                                className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2 transition-colors"
-                                                                                onClick={() => setOpenReplies(prev => ({ ...prev, [parent._id]: !open }))}
-                                                                            >
-                                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={open ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-                                                                                </svg>
-                                                                                {open ? 'Show less replies' : `View ${replies.length - shown.length} more replies`}
-                                                                            </button>
-                                                                        )}
+                                        {/* Reply Messages - Indented under the thread */}
+                                        <div className="ml-6 mt-4 border-l-2 border-slate-200 pl-4 space-y-4">
+                                            {(thread.messages || []).map((message) => (
+                                                <div key={message._id} className={`${message.parent ? 'ml-8 border-l-2 border-slate-200 pl-4' : ''}`}>
+                                                    <div className="bg-slate-50 rounded-lg p-4">
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {message.sender.image ? (
+                                                                    <img
+                                                                        src={message.sender.image}
+                                                                        alt={message.sender.fullName}
+                                                                        className="w-5 h-5 rounded-full object-cover"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-semibold">
+                                                                        {message.sender.fullName?.charAt(0)?.toUpperCase() || 'U'}
                                                                     </div>
-                                                                );
-                                                            })()}
-
-                                                            {/* Reply Input */}
-                                                            {replyToId === parent._id && (
-                                                                <div id={`reply-input-${parent._id}`} className="ml-6 pl-6 border-l-2 border-slate-200 mt-4">
-                                                                    <div className="bg-slate-50/50 rounded-xl p-4">
-                                                                        <div className="flex gap-3">
-                                                                            <input
-                                                                                className="flex-1 border border-slate-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                                placeholder="Write a reply..."
-                                                                                value={replyText}
-                                                                                onChange={(e) => setReplyText(e.target.value)}
-                                                                                onKeyDown={(e) => { if (e.key === 'Enter') sendReply(parent as any); }}
-                                                                            />
-                                                                            <button
-                                                                                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
-                                                                                onClick={() => sendReply(parent as any)}
-                                                                                disabled={!replyText.trim()}
-                                                                            >
-                                                                                Reply
-                                                                            </button>
-                                                                        </div>
+                                                                )}
+                                                                <span className="font-medium text-slate-800">
+                                                                    {message.sender.fullName}
+                                                                </span>
+                                                                <span className="text-slate-500 text-sm">
+                                                                    {formatWhen(message.createdAt)}
+                                                                </span>
+                                                            </div>
+                                                            {isAuthor(message) && (
+                                                                <div className="relative dropdown-container">
+                                                                    <button
+                                                                        className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                            if (dropdown.classList.contains('hidden')) {
+                                                                                dropdown.classList.remove('hidden');
+                                                                            } else {
+                                                                                dropdown.classList.add('hidden');
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                                                        </svg>
+                                                                    </button>
+                                                                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 hidden">
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                setReplyText(message.text);
+                                                                                setEditingMessage(message._id);
+                                                                                // Hide dropdown
+                                                                                const dropdown = e.currentTarget.closest('.dropdown-container')?.querySelector('.absolute') as HTMLElement;
+                                                                                if (dropdown) dropdown.classList.add('hidden');
+                                                                            }}
+                                                                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                                                        >
+                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                            </svg>
+                                                                            Edit
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                handleDeleteClick('message', message._id);
+                                                                                // Hide dropdown
+                                                                                const dropdown = e.currentTarget.closest('.dropdown-container')?.querySelector('.absolute') as HTMLElement;
+                                                                                if (dropdown) dropdown.classList.add('hidden');
+                                                                            }}
+                                                                            disabled={deleting}
+                                                                            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50"
+                                                                        >
+                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                            </svg>
+                                                                            Delete
+                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                             )}
                                                         </div>
+                                                        <p className="text-slate-700">{message.text}</p>
                                                     </div>
+
+                                                    {/* Reply to message input */}
+                                                    {replyToMessage === message._id && (
+                                                        <div className="mt-4 bg-slate-50 rounded-lg p-4">
+                                                            <textarea
+                                                                value={replyText}
+                                                                onChange={(e) => setReplyText(e.target.value)}
+                                                                placeholder="Write your reply..."
+                                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                                                rows={3}
+                                                            />
+                                                            <div className="flex items-center justify-end gap-2 mt-3">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setReplyToMessage(null);
+                                                                        setReplyText('');
+                                                                    }}
+                                                                    className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => createMessage(thread._id, message._id)}
+                                                                    disabled={!replyText.trim() || replying}
+                                                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
+                                                                >
+                                                                    {replying ? 'Posting...' : 'Post Reply'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
+
+                                        {/* Reply to thread input */}
+                                        {replyToMessage === thread._id && (
+                                            <div className="mt-4 bg-slate-50 rounded-lg p-4" data-reply-to={thread._id}>
+                                                <textarea
+                                                    value={replyText}
+                                                    onChange={(e) => setReplyText(e.target.value)}
+                                                    placeholder="Write a reply to this discussion..."
+                                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                                    rows={3}
+                                                />
+                                                <div className="flex items-center justify-end gap-2 mt-3">
+                                                    <button
+                                                        onClick={() => {
+                                                            setReplyText('');
+                                                            setReplyToMessage(null);
+                                                        }}
+                                                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={() => createMessage(thread._id)}
+                                                        disabled={!replyText.trim() || replying}
+                                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
+                                                    >
+                                                        {replying ? 'Posting...' : 'Post Reply'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                ))
-                            )}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Create Post Modal */}
-            {
-                showComposer && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowComposer(false)} />
-                        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-slate-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-white">Create New Discussion</h2>
-                                        <p className="text-slate-300 mt-1">Start a conversation with your team</p>
-                                    </div>
-                                    <button
-                                        className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                                        onClick={() => setShowComposer(false)}
-                                    >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
+            {/* Create/Edit Discussion Modal */}
+            {showComposer && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b border-slate-200">
+                            <h2 className="text-xl font-bold text-slate-800">
+                                {editingThread ? 'Edit Discussion' : 'Create New Discussion'}
+                            </h2>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Title</label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="Enter discussion title..."
+                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Message</label>
+                                <textarea
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                    placeholder="Write your message..."
+                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                    rows={6}
+                                />
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-4">
+                            <button
+                                onClick={() => {
+                                    setShowComposer(false);
+                                    setEditingThread(null);
+                                    setTitle('');
+                                    setText('');
+                                }}
+                                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (editingThread) {
+                                        updateThread(editingThread);
+                                    } else {
+                                        createThread();
+                                    }
+                                }}
+                                disabled={!canCreate || creating}
+                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                                {creating ? 'Creating...' : editingThread ? 'Update Discussion' : 'Create Discussion'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Message Modal */}
+            {editingMessage && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+                        <div className="p-6 border-b border-slate-200">
+                            <h2 className="text-xl font-bold text-slate-800">Edit Message</h2>
+                        </div>
+                        <div className="p-6">
+                            <textarea
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                placeholder="Write your message..."
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                rows={6}
+                            />
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-4">
+                            <button
+                                onClick={() => {
+                                    setEditingMessage(null);
+                                    setReplyText('');
+                                }}
+                                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => updateMessage(editingMessage)}
+                                disabled={!replyText.trim() || replying}
+                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                                {replying ? 'Updating...' : 'Update Message'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Dialog */}
+            {showDeleteDialog && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                        <div className="p-6">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-900">
+                                        Delete {deleteTarget?.type === 'thread' ? 'Discussion' : 'Message'}
+                                    </h3>
+                                    <p className="text-sm text-slate-500">
+                                        This action cannot be undone
+                                    </p>
                                 </div>
                             </div>
-                            <div className="p-8 space-y-6">
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Discussion Title</label>
-                                    <input
-                                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                                        placeholder="Enter a compelling title for your discussion..."
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Discussion Content</label>
-                                    <textarea
-                                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-colors"
-                                        rows={5}
-                                        placeholder="Share your thoughts, questions, or ideas with the team..."
-                                        value={text}
-                                        onChange={(e) => setText(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-3">Categorization (Optional)</label>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-600 mb-1">Subject</label>
-                                            <select
-                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                                                value={subject || ''}
-                                                onChange={(e) => setSubject(e.target.value || null)}
-                                            >
-                                                <option value="">Select subject...</option>
-                                                {subjects.map((s: any) => <option key={s._id} value={s._id}>{s.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-600 mb-1">Topic</label>
-                                            <select
-                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:bg-slate-100"
-                                                value={topic || ''}
-                                                onChange={(e) => setTopic(e.target.value || null)}
-                                                disabled={!subject}
-                                            >
-                                                <option value="">Select topic...</option>
-                                                {topics.map((t: any) => <option key={t._id} value={t._id}>{t.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-600 mb-1">Lesson</label>
-                                            <select
-                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:bg-slate-100"
-                                                value={lesson || ''}
-                                                onChange={(e) => setLesson(e.target.value || null)}
-                                                disabled={!topic}
-                                            >
-                                                <option value="">Select lesson...</option>
-                                                {lessons.map((l: any) => <option key={l._id} value={l._id}>{l.name}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
+
+                            <div className="mb-6">
+                                <p className="text-slate-700">
+                                    {deleteTarget?.type === 'thread'
+                                        ? `Are you sure you want to delete the discussion "${deleteTarget.title}"? This will also delete all replies.`
+                                        : 'Are you sure you want to delete this message?'
+                                    }
+                                </p>
                             </div>
-                            <div className="px-8 py-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-4">
+
+                            <div className="flex items-center justify-end gap-3">
                                 <button
-                                    className="px-6 py-3 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                                    onClick={() => setShowComposer(false)}
+                                    onClick={cancelDelete}
+                                    disabled={deleting}
+                                    className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
                                 <button
-                                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3 disabled:opacity-50 disabled:transform-none"
-                                    onClick={createPost}
-                                    disabled={!canCreate || creating}
+                                    onClick={confirmDelete}
+                                    disabled={deleting}
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
                                 >
-                                    {creating && (
-                                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
+                                    {deleting ? (
+                                        <>
+                                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Deleting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            Delete
+                                        </>
                                     )}
-                                    {creating ? 'Creating Discussion...' : 'Create Discussion'}
                                 </button>
                             </div>
                         </div>
                     </div>
-                )
-            }
-
-            {/* Edit Thread Modal */}
-            {showEditModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowEditModal(false)} />
-                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-slate-200 overflow-hidden">
-                        <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-white">Edit Discussion</h2>
-                                    <p className="text-slate-300 mt-1">Update your discussion details</p>
-                                </div>
-                                <button
-                                    className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                                    onClick={() => setShowEditModal(false)}
-                                >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div className="p-8 space-y-6">
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Discussion Title</label>
-                                <input
-                                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                                    placeholder="Enter a compelling title for your discussion..."
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Discussion Content</label>
-                                <textarea
-                                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-colors"
-                                    rows={5}
-                                    placeholder="Share your thoughts, questions, or ideas with the team..."
-                                    value={text}
-                                    onChange={(e) => setText(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-3">Categorization (Optional)</label>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-medium text-slate-600 mb-1">Subject</label>
-                                        <select
-                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                                            value={subject || ''}
-                                            onChange={(e) => setSubject(e.target.value || null)}
-                                        >
-                                            <option value="">Select subject...</option>
-                                            {subjects.map((s: any) => <option key={s._id} value={s._id}>{s.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-slate-600 mb-1">Topic</label>
-                                        <select
-                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:bg-slate-100"
-                                            value={topic || ''}
-                                            onChange={(e) => setTopic(e.target.value || null)}
-                                            disabled={!subject}
-                                        >
-                                            <option value="">Select topic...</option>
-                                            {topics.map((t: any) => <option key={t._id} value={t._id}>{t.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-slate-600 mb-1">Lesson</label>
-                                        <select
-                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:bg-slate-100"
-                                            value={lesson || ''}
-                                            onChange={(e) => setLesson(e.target.value || null)}
-                                            disabled={!topic}
-                                        >
-                                            <option value="">Select lesson...</option>
-                                            {lessons.map((l: any) => <option key={l._id} value={l._id}>{l.name}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-4">
-                            <button
-                                className="px-6 py-3 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                                onClick={() => setShowEditModal(false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3 disabled:opacity-50 disabled:transform-none"
-                                onClick={saveEditThread}
-                                disabled={!title.trim() || !text.trim() || editing}
-                            >
-                                {editing && (
-                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                )}
-                                {editing ? 'Saving Changes...' : 'Save Changes'}
-                            </button>
-                        </div>
-                    </div>
                 </div>
             )}
-
-            {/* Delete Confirmation Modal */}
-            {showDeleteModal && itemToDelete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
-                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
-                        <div className="bg-gradient-to-r from-red-50 to-red-100 px-8 py-6 border-b border-red-200">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-slate-800">Delete {itemToDelete.parent ? 'Reply' : 'Thread'}</h3>
-                                    <p className="text-slate-600 text-sm">This action cannot be undone</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-8">
-                            <p className="text-slate-700 leading-relaxed">
-                                Are you sure you want to delete this {itemToDelete.parent ? 'reply' : 'thread'}?
-                                {!itemToDelete.parent && ' This will also delete all replies in this thread.'}
-                            </p>
-                        </div>
-                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-4">
-                            <button
-                                className="px-6 py-3 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
-                                onClick={() => setShowDeleteModal(false)}
-                                disabled={deleting}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="px-6 py-3 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:transform-none"
-                                onClick={deleteItem}
-                                disabled={deleting}
-                            >
-                                {deleting && (
-                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                )}
-                                {deleting ? 'Deleting...' : 'Delete'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </>
+        </div>
     );
 };
 
 export default Discussion;
-
-
