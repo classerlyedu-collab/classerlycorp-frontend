@@ -65,17 +65,21 @@ const Subscription: React.FC = () => {
     const status = data?.subscription?.status;
     const seatCount = data?.seatCount || 0;
 
-    // Format next billing date in a more humanized way
-    const formatNextBilling = (dateString: string) => {
-        if (!dateString) return { date: 'N/A', daysUntil: 0 };
+    // Calculate next billing date by adding 30 days to current period end
+    const formatNextBilling = (currentPeriodEnd: string) => {
+        if (!currentPeriodEnd) return { date: 'N/A', daysUntil: 0 };
 
-        const date = new Date(dateString);
+        const currentEndDate = new Date(currentPeriodEnd);
+        // Add 30 days to get next billing cycle
+        const nextBillingDate = new Date(currentEndDate);
+        nextBillingDate.setDate(currentEndDate.getDate() + 30);
+
         const now = new Date();
-        const diffTime = date.getTime() - now.getTime();
+        const diffTime = nextBillingDate.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        // Format date as "Nov 2, 2025"
-        const formattedDate = date.toLocaleDateString('en-US', {
+        // Format date as "Jan 7, 2026"
+        const formattedDate = nextBillingDate.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric'
