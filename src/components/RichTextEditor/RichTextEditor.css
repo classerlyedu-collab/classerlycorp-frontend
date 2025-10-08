@@ -1,0 +1,242 @@
+/* Rich Text Editor Custom Styles */
+.rich-text-editor .quill {
+    border-radius: 0.5rem;
+}
+
+.rich-text-editor .ql-toolbar {
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+}
+
+.rich-text-editor .ql-container {
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-top: none;
+    font-size: 0.875rem;
+    font-family: inherit;
+    min-height: 120px;
+}
+
+.rich-text-editor .ql-editor {
+    min-height: 120px;
+}
+
+.rich-text-editor .ql-editor.ql-blank::before {
+    color: #94a3b8;
+    font-style: normal;
+}
+
+.rich-text-editor .ql-editor p {
+    margin-bottom: 0.5em;
+}
+
+.rich-text-editor .ql-editor ul,
+.rich-text-editor .ql-editor ol {
+    padding-left: 1.5em;
+}
+
+.rich-text-editor .ql-snow .ql-stroke {
+    stroke: #475569;
+}
+
+.rich-text-editor .ql-snow .ql-fill {
+    fill: #475569;
+}
+
+.rich-text-editor .ql-toolbar button:hover,
+.rich-text-editor .ql-toolbar button:focus {
+    color: #3b82f6;
+}
+
+.rich-text-editor .ql-toolbar button:hover .ql-stroke,
+.rich-text-editor .ql-toolbar button:focus .ql-stroke {
+    stroke: #3b82f6;
+}
+
+.rich-text-editor .ql-toolbar button:hover .ql-fill,
+.rich-text-editor .ql-toolbar button:focus .ql-fill {
+    fill: #3b82f6;
+}
+
+.rich-text-editor .ql-toolbar button.ql-active {
+    color: #3b82f6;
+}
+
+.rich-text-editor .ql-toolbar button.ql-active .ql-stroke {
+    stroke: #3b82f6;
+}
+
+.rich-text-editor .ql-toolbar button.ql-active .ql-fill {
+    fill: #3b82f6;
+}
+
+/* Images in editor */
+.rich-text-editor .ql-editor img {
+    max-width: 400px;
+    width: auto;
+    height: auto;
+    max-height: 300px;
+    border-radius: 0.5rem;
+    margin: 0.5em 0;
+    object-fit: contain;
+}
+
+/* Videos in editor */
+.rich-text-editor .ql-editor iframe,
+.rich-text-editor .ql-editor video,
+.rich-text-editor .ql-editor .ql-video {
+    max-width: 480px;
+    width: 100%;
+    height: auto;
+    max-height: 360px;
+    border-radius: 0.5rem;
+    margin: 0.5em 0;
+    display: block;
+}
+
+.rich-text-editor .ql-editor iframe {
+    height: 270px;
+}
+
+/* Custom video blot styling */
+.ql-video {
+    display: block;
+    max-width: 480px;
+    width: 100%;
+    height: auto;
+    max-height: 360px;
+}
+
+/* Display styled content in messages */
+.prose .ql-editor strong,
+.text-slate-700 strong {
+    font-weight: 600;
+}
+
+.prose .ql-editor em,
+.text-slate-700 em {
+    font-style: italic;
+}
+
+.prose .ql-editor u,
+.text-slate-700 u {
+    text-decoration: underline;
+}
+
+.prose .ql-editor s,
+.text-slate-700 s {
+    text-decoration: line-through;
+}
+
+.prose .ql-editor a,
+.text-slate-700 a {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+.prose .ql-editor a:hover,
+.text-slate-700 a:hover {
+    color: #2563eb;
+}
+
+.prose .ql-editor h1,
+.text-slate-700 h1 {
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 0.5em;
+}
+
+.prose .ql-editor h2,
+.text-slate-700 h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-bottom: 0.5em;
+}
+
+.prose .ql-editor h3,
+.text-slate-700 h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin-bottom: 0.5em;
+}
+
+.prose .ql-editor ul,
+.text-slate-700 ul {
+    list-style-type: disc;
+    padding-left: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+.prose .ql-editor ol,
+.text-slate-700 ol {
+    list-style-type: decimal;
+    padding-left: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+.prose .ql-editor li,
+.text-slate-700 li {
+    margin-bottom: 0.25em;
+}
+
+/* Images in rendered messages */
+.text-slate-700 img {
+    max-width: 400px;
+    width: auto;
+    height: auto;
+    max-height: 300px;
+    border-radius: 0.5rem;
+    margin: 0.5em 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    object-fit: contain;
+    cursor: pointer;
+}
+
+/* Videos in rendered messages */
+.text-slate-700 iframe,
+.text-slate-700 video {
+    max-width: 480px;
+    width: 100%;
+    border-radius: 0.5rem;
+    margin: 0.5em 0;
+    border: none;
+}
+
+.text-slate-700 iframe {
+    height: 270px;
+}
+
+.text-slate-700 video {
+    height: auto;
+    max-height: 360px;
+}
+
+.prose .ql-editor img {
+    max-width: 400px;
+    width: auto;
+    height: auto;
+    max-height: 300px;
+    border-radius: 0.5rem;
+    margin: 0.5em 0;
+    object-fit: contain;
+}
+
+.prose .ql-editor iframe,
+.prose .ql-editor video {
+    max-width: 480px;
+    width: 100%;
+    border-radius: 0.5rem;
+    margin: 0.5em 0;
+}
+
+.prose .ql-editor iframe {
+    height: 270px;
+}
+
+.prose .ql-editor video {
+    height: auto;
+    max-height: 360px;
+}

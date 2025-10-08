@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Navbar, SideDrawer } from '../../components';
+import { Navbar, SideDrawer, RichTextEditor } from '../../components';
 import { Get, Post, Put, Delete } from '../../config/apiMethods';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { RouteName } from '../../routes/RouteNames';
 import { displayMessage } from '../../config';
+import DOMPurify from 'dompurify';
 
 interface Thread {
     _id: string;
@@ -52,7 +53,24 @@ const Discussion: React.FC = () => {
     const { subjectId, topicId, lessonId } = useParams<{ subjectId: string; topicId: string; lessonId: string }>();
     const navigate = useNavigate();
 
-    const canCreate = title.trim().length > 0 && text.trim().length > 0;
+    // Helper function to strip HTML tags for validation
+    const stripHtml = (html: string) => {
+        const tmp = document.createElement('DIV');
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || '';
+    };
+
+    // Helper function to sanitize HTML content
+    const sanitizeHtml = (html: string) => {
+        return DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'ol', 'ul', 'li', 'a', 'img', 'iframe', 'video', 'source'],
+            ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow', 'controls', 'type', 'poster', 'preload'],
+            ALLOWED_STYLES: ['color', 'background-color', 'max-width'],
+            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+        });
+    };
+
+    const canCreate = title.trim().length > 0 && stripHtml(text).trim().length > 0;
     const currentUserId = useMemo(() => {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         return user?._id || user?.id;
@@ -438,14 +456,17 @@ const Discussion: React.FC = () => {
 
         // Smooth scroll to reply input after a short delay
         setTimeout(() => {
-            const replyInput = document.querySelector(`[data-reply-to="${messageId}"] textarea`);
-            if (replyInput) {
-                replyInput.scrollIntoView({
+            const replyContainer = document.querySelector(`[data-reply-to="${messageId}"]`);
+            if (replyContainer) {
+                replyContainer.scrollIntoView({
                     behavior: 'smooth',
                     block: 'center'
                 });
-                // Auto-focus the textarea
-                (replyInput as HTMLTextAreaElement).focus();
+                // Auto-focus the rich text editor
+                const quillEditor = replyContainer.querySelector('.ql-editor');
+                if (quillEditor) {
+                    (quillEditor as HTMLElement).focus();
+                }
             }
         }, 100);
     };
@@ -742,9 +763,10 @@ const Discussion: React.FC = () => {
                                                         )}
                                                     </div>
                                                     <div className="prose prose-slate max-w-none">
-                                                        <p className="text-slate-700 leading-relaxed text-base mb-4">
-                                                            {thread.message}
-                                                        </p>
+                                                        <div
+                                                            className="text-slate-700 leading-relaxed text-base mb-4"
+                                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(thread.message) }}
+                                                        />
                                                     </div>
                                                     <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                                                         <button
@@ -839,18 +861,20 @@ const Discussion: React.FC = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <p className="text-slate-700">{message.text}</p>
+                                                        <div
+                                                            className="text-slate-700"
+                                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.text) }}
+                                                        />
                                                     </div>
 
                                                     {/* Reply to message input */}
                                                     {replyToMessage === message._id && (
                                                         <div className="mt-4 bg-slate-50 rounded-lg p-4">
-                                                            <textarea
+                                                            <RichTextEditor
                                                                 value={replyText}
-                                                                onChange={(e) => setReplyText(e.target.value)}
+                                                                onChange={setReplyText}
                                                                 placeholder="Write your reply..."
-                                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                                                rows={3}
+                                                                className="border border-slate-300 rounded-lg"
                                                             />
                                                             <div className="flex items-center justify-end gap-2 mt-3">
                                                                 <button
@@ -864,7 +888,7 @@ const Discussion: React.FC = () => {
                                                                 </button>
                                                                 <button
                                                                     onClick={() => createMessage(thread._id, message._id)}
-                                                                    disabled={!replyText.trim() || replying}
+                                                                    disabled={!stripHtml(replyText).trim() || replying}
                                                                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
                                                                 >
                                                                     {replying ? 'Posting...' : 'Post Reply'}
@@ -879,12 +903,11 @@ const Discussion: React.FC = () => {
                                         {/* Reply to thread input */}
                                         {replyToMessage === thread._id && (
                                             <div className="mt-4 bg-slate-50 rounded-lg p-4" data-reply-to={thread._id}>
-                                                <textarea
+                                                <RichTextEditor
                                                     value={replyText}
-                                                    onChange={(e) => setReplyText(e.target.value)}
+                                                    onChange={setReplyText}
                                                     placeholder="Write a reply to this discussion..."
-                                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                                    rows={3}
+                                                    className="border border-slate-300 rounded-lg"
                                                 />
                                                 <div className="flex items-center justify-end gap-2 mt-3">
                                                     <button
@@ -898,7 +921,7 @@ const Discussion: React.FC = () => {
                                                     </button>
                                                     <button
                                                         onClick={() => createMessage(thread._id)}
-                                                        disabled={!replyText.trim() || replying}
+                                                        disabled={!stripHtml(replyText).trim() || replying}
                                                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
                                                     >
                                                         {replying ? 'Posting...' : 'Post Reply'}
@@ -936,12 +959,11 @@ const Discussion: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">Message</label>
-                                <textarea
+                                <RichTextEditor
                                     value={text}
-                                    onChange={(e) => setText(e.target.value)}
+                                    onChange={setText}
                                     placeholder="Write your message..."
-                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                    rows={6}
+                                    className="border border-slate-300 rounded-lg"
                                 />
                             </div>
                         </div>
@@ -983,12 +1005,11 @@ const Discussion: React.FC = () => {
                             <h2 className="text-xl font-bold text-slate-800">Edit Message</h2>
                         </div>
                         <div className="p-6">
-                            <textarea
+                            <RichTextEditor
                                 value={replyText}
-                                onChange={(e) => setReplyText(e.target.value)}
+                                onChange={setReplyText}
                                 placeholder="Write your message..."
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                rows={6}
+                                className="border border-slate-300 rounded-lg"
                             />
                         </div>
                         <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-4">
@@ -1003,7 +1024,7 @@ const Discussion: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => updateMessage(editingMessage)}
-                                disabled={!replyText.trim() || replying}
+                                disabled={!stripHtml(replyText).trim() || replying}
                                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
                             >
                                 {replying ? 'Updating...' : 'Update Message'}

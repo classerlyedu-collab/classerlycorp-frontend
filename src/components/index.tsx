@@ -10,5 +10,6 @@ export * from './employeeComponents';
 export * from './NavbarGames';
 export * from './CourseSelection';
 export * from './Notifications';
+export * from './RichTextEditor';
 export { default as ProtectedRoute } from './ProtectedRoute';
 // export { default as SubscriptionPackages } from './SubscriptionPackages'; // Removed - subscription no longer needed
