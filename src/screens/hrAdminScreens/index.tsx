@@ -6,3 +6,5 @@ export * from './AddQuiz';
 export * from './EmployeeDetails';
 export * from './MyQuizzes';
 export * from './UpdateQuiz';
+export * from './Rubrics';
+export * from './Assignments';

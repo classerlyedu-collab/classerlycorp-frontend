@@ -41,6 +41,7 @@ interface RichTextEditorProps {
     placeholder?: string;
     className?: string;
     readOnly?: boolean;
+    minHeight?: string;
 }
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
@@ -48,7 +49,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     onChange,
     placeholder = 'Start typing...',
     className = '',
-    readOnly = false
+    readOnly = false,
+    minHeight = '120px'
 }) => {
     const quillRef = useRef<ReactQuill>(null);
 
@@ -209,7 +211,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 formats={formats}
                 readOnly={readOnly}
                 className="bg-white rounded-lg"
+                style={{
+                    height: '100%'
+                }}
             />
+            <style jsx>{`
+                .rich-text-editor .ql-container {
+                    min-height: ${minHeight};
+                }
+                .rich-text-editor .ql-editor {
+                    min-height: ${minHeight};
+                }
+            `}</style>
         </div>
     );
 };

@@ -1,5 +1,6 @@
 export * from './Dashboard';
 export * from './Results';
+export * from './Assignments';
 export * from './Subjects';
 export * from './Material';
 // export * from './Games'; // Removed - games no longer needed

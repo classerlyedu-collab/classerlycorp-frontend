@@ -15,6 +15,7 @@ import { MdOutlineSchool, MdSupervisorAccount } from "react-icons/md";
 import { RiFileList3Line } from "react-icons/ri";
 import { FiGrid } from "react-icons/fi";
 import { IoMdLogOut } from "react-icons/io";
+import { HiOutlineDocumentText, HiOutlineClipboardList } from "react-icons/hi";
 import { Post } from "../../config/apiMethods";
 import { useSubscriptionStatus } from "../../hooks/useSubscriptionStatus.hook";
 import { displayMessage } from "../../config";
@@ -154,6 +155,16 @@ const SideDrawer = () => {
       route: RouteName.MY_QUIZZES,
     },
     {
+      icon: <HiOutlineDocumentText className="mr-4 text-md md:text-base lg:text-2xl" />,
+      text: "Rubrics",
+      route: RouteName.RUBRICS_SCREEN,
+    },
+    {
+      icon: <HiOutlineClipboardList className="mr-4 text-md md:text-base lg:text-2xl" />,
+      text: "Assignments",
+      route: RouteName.ASSIGNMENTS_SCREEN,
+    },
+    {
       icon: <PiStudentFill className="mr-4 text-md md:text-base lg:text-2xl" />,
       text: "Employees",
       route: RouteName.EMPLOYEES_SCREEN,
@@ -204,6 +215,11 @@ const SideDrawer = () => {
       ),
       text: "Courses",
       route: RouteName.SUBJECTS_SCREEN,
+    },
+    {
+      icon: <HiOutlineClipboardList className="mr-4 text-md md:text-base lg:text-2xl" />,
+      text: "Assignments",
+      route: RouteName.ASSIGNMENTS_SCREEN_EMPLOYEE,
     },
     {
       icon: (

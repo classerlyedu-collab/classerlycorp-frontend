@@ -29,6 +29,8 @@ export const RouteName = {
     MY_QUIZZES: '/my_quizzes',
     SUBJECT_TOPIC_MANAGEMENT: '/content-management',
     DISCUSSION_HR: '/Discussion',
+    RUBRICS_SCREEN: '/Rubrics',
+    ASSIGNMENTS_SCREEN: '/Assignments',
 
     // Employee
     DASHBOARD_SCREEN_EMPLOYEE: '/Dashboard_Employee',
@@ -50,5 +52,6 @@ export const RouteName = {
     QUIZ_CONFIRMATION: '/Subjects/Daily_Quiz/Confirmation',
     QUIZ_RESULT: '/Subjects/Daily_Quiz/Result',
     DISCUSSION_EMP: '/Discussion',
+    ASSIGNMENTS_SCREEN_EMPLOYEE: '/Assignments_Employee',
 
 };

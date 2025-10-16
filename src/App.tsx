@@ -14,6 +14,9 @@ const Employees = lazy(() => import("./screens/hrAdminScreens/Employees").then(m
 const Supervisors = lazy(() => import("./screens/hrAdminScreens/Supervisors/Supervisors"));
 const Instructors = lazy(() => import("./screens/hrAdminScreens/Instructors/Instructors"));
 const Subscription = lazy(() => import("./screens/hrAdminScreens/Subscription/Subscription"));
+const Rubrics = lazy(() => import("./screens/hrAdminScreens/Rubrics").then(module => ({ default: module.Rubrics })));
+const Assignments = lazy(() => import("./screens/hrAdminScreens/Assignments").then(module => ({ default: module.Assignments })));
+const EmployeeAssignments = lazy(() => import("./screens/employeeScreens/Assignments").then(module => ({ default: module.Assignments })));
 const EmployeeDetails = lazy(() => import("./screens/hrAdminScreens/EmployeeDetails").then(module => ({ default: module.EmployeeDetails })));
 const MyQuizzes = lazy(() => import("./screens/hrAdminScreens/MyQuizzes").then(module => ({ default: module.MyQuizzes })));
 const AddQuiz = lazy(() => import("./screens/hrAdminScreens/AddQuiz").then(module => ({ default: module.AddQuiz })));
@@ -115,6 +118,16 @@ function App() {
               <SubjectTopicManagement />
             </ProtectedRoute>
           } />
+          <Route path={RouteName.RUBRICS_SCREEN} element={
+            <ProtectedRoute requiredRole="HR-Admin">
+              <Rubrics />
+            </ProtectedRoute>
+          } />
+          <Route path={RouteName.ASSIGNMENTS_SCREEN} element={
+            <ProtectedRoute requiredRole="HR-Admin">
+              <Assignments />
+            </ProtectedRoute>
+          } />
 
           {/* Supervisor Routes */}
           <Route path={RouteName.DASHBOARD_SCREEN} element={
@@ -177,6 +190,11 @@ function App() {
           <Route path={RouteName.QUIZ_RESULT} element={
             <ProtectedRoute requiredRole="Employee">
               <QuizResult />
+            </ProtectedRoute>
+          } />
+          <Route path={RouteName.ASSIGNMENTS_SCREEN_EMPLOYEE} element={
+            <ProtectedRoute requiredRole="Employee">
+              <EmployeeAssignments />
             </ProtectedRoute>
           } />
 
