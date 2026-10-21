@@ -1,8 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Get, Delete, Put } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
-import { RouteName } from "../../../../routes/RouteNames";
-import { useNavigate } from "react-router-dom";
 import { IoClose } from "react-icons/io5";
 import { UseStateContext } from "../../../../context/ContextProvider";
 import { useSocket } from "../../../../hooks/useSocket";
@@ -39,13 +37,12 @@ export const MyInstructors = () => {
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
     const [userPresence, setUserPresence] = useState<Record<string, 'online' | 'away' | 'offline'>>({});
     const { role } = UseStateContext();
-    const navigate = useNavigate();
     const commentsEndRef = useRef<HTMLDivElement>(null);
 
     // Socket functionality
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const token = localStorage.getItem("token") || "";
-    const { socket, isConnected } = useSocket(token);
+    const { socket } = useSocket(token);
 
     // Set up comment socket for current conversation 
     useCommentSocket({

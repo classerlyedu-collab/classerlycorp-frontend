@@ -4,11 +4,9 @@ import { Post } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config";
 import { CustomInput } from "../../customInput";
 // import { useSubscriptionLimits } from "../../../hooks/useSubscriptionLimits"; // Removed - subscription no longer needed
-import { UseStateContext } from "../../../context/ContextProvider";
 
 const AddChildern = () => {
   const [studentName, setStudentName] = useState<string>("");
-  const { role } = UseStateContext();
   // Subscription limits removed - all users can add employees freely
   const isButtonEnabled = studentName?.length >= 1;
   const handleAddStd = () => {

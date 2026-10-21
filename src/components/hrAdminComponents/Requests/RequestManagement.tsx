@@ -6,7 +6,6 @@ import {
     BsCheckCircle,
     BsXCircle,
     BsPersonFill,
-    BsChevronRight,
     BsEye,
     BsTrash3,
     BsX,

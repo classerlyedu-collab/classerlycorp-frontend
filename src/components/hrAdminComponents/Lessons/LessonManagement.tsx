@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Get, Post, Put, Delete } from '../../../config/apiMethods';
 import { displayMessage } from '../../../config';
 import { FiPlus, FiEdit2, FiTrash2, FiFileText, FiChevronRight, FiExternalLink, FiEye, FiX, FiAlertTriangle } from 'react-icons/fi';
@@ -196,7 +196,6 @@ const SortableLessonItem: React.FC<SortableLessonItemProps> = ({
 
 const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBackToTopics }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
-    const [topics, setTopics] = useState<Topic[]>([]); // For dropdown in modal
     const [loading, setLoading] = useState<boolean>(true);
     const [showModal, setShowModal] = useState<boolean>(false);
     const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
@@ -206,7 +205,7 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
     const [lessonToDelete, setLessonToDelete] = useState<Lesson | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
-    const [isReordering, setIsReordering] = useState<boolean>(false);
+    const [, setIsReordering] = useState<boolean>(false);
     const [formData, setFormData] = useState({
         name: '',
         content: '', // Google Docs URL, YouTube URL, Google Slides URL, or Google Sheets URL
@@ -225,13 +224,7 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
         })
     );
 
-    useEffect(() => {
-        if (selectedTopic) {
-            fetchLessons();
-        }
-    }, [selectedTopic]);
-
-    const fetchLessons = async () => {
+    const fetchLessons = useCallback(async () => {
         if (!selectedTopic) return;
 
         try {
@@ -249,7 +242,13 @@ const LessonManagement: React.FC<LessonManagementProps> = ({ selectedTopic, onBa
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedTopic]);
+
+    useEffect(() => {
+        if (selectedTopic) {
+            fetchLessons();
+        }
+    }, [fetchLessons, selectedTopic]);
 
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;

@@ -36,12 +36,6 @@ const TeacherFeedback = () => {
   // Separate Errors
   const [feedbackError, setFeedbackError] = useState<string>('');
 
-  const teachersData = [
-    { label: 'Sir Williams', value: 1 },
-    { label: 'Sir Johnson', value: 2 },
-    { label: 'Sir Bob', value: 3 },
-    { label: 'Sir Anthony', value: 4 },
-  ];
   let navigate = useNavigate()
   const submitFeedback = () => {
     try {

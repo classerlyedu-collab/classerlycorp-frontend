@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Post, Put, Get } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config";
 import { RichTextEditor } from "../../index";

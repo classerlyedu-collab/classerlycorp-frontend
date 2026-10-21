@@ -1,4 +1,4 @@
-import { AiFillGift, AiOutlineClose, AiOutlineHome } from "react-icons/ai";
+import { AiOutlineClose, AiOutlineHome } from "react-icons/ai";
 import {
   MdOutlineCalendarMonth
 } from "react-icons/md";
@@ -16,9 +16,7 @@ import { RiFileList3Line } from "react-icons/ri";
 import { FiGrid } from "react-icons/fi";
 import { IoMdLogOut } from "react-icons/io";
 import { HiOutlineDocumentText, HiOutlineClipboardList } from "react-icons/hi";
-import { Post } from "../../config/apiMethods";
 import { useSubscriptionStatus } from "../../hooks/useSubscriptionStatus.hook";
-import { displayMessage } from "../../config";
 // import { MdOutlineSubscriptions } from "react-icons/md"; // Removed - subscription no longer needed
 // import { useSubscriptionStatus } from "../../hooks/useSubscriptionStatus"; // Removed - subscription no longer needed
 
@@ -47,11 +45,6 @@ const SideDrawer = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Create a URLSearchParams object to extract the query parameters
-  const searchParams = new URLSearchParams(location.search);
-
-  // Get the value of the 'childern' query parameter
-  const childernValue = searchParams.get("childern");
   const { showSideBar, setShowSideBar } = UseStateContext();
 
   // Removed handleSubscriptionPortal - subscription no longer needed

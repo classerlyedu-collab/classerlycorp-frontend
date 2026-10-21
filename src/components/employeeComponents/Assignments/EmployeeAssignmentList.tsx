@@ -52,19 +52,6 @@ const EmployeeAssignmentList: React.FC = () => {
         return new Date(deadline) < new Date();
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "published":
-                return "bg-green-100 text-green-700";
-            case "draft":
-                return "bg-yellow-100 text-yellow-700";
-            case "archived":
-                return "bg-gray-100 text-gray-700";
-            default:
-                return "bg-blue-100 text-blue-700";
-        }
-    };
-
     const toggleExpand = (id: string) => {
         setExpandedAssignment(expandedAssignment === id ? null : id);
     };
@@ -262,4 +249,3 @@ const EmployeeAssignmentList: React.FC = () => {
 };
 
 export default EmployeeAssignmentList;
-

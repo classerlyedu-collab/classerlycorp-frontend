@@ -57,12 +57,6 @@ const DiscussionTopics: React.FC = () => {
         }
     };
 
-    const SkeletonLoader = () => (
-        <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-32"></div>
-        </div>
-    );
-
     const BreadcrumbSkeleton = () => (
         <div className="mb-4">
             <nav className="text-sm">

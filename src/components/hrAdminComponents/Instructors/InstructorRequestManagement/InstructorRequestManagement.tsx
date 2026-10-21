@@ -49,7 +49,7 @@ const InstructorRequestManagement: React.FC<InstructorRequestManagementProps> = 
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<boolean>(false);
     const [requestToCancel, setRequestToCancel] = useState<string | null>(null);
     const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
-    const [topicsForSubject, setTopicsForSubject] = useState<any[]>([]);
+    const [, setTopicsForSubject] = useState<any[]>([]);
 
     const fetchRequests = async () => {
         try {
@@ -148,19 +148,6 @@ const InstructorRequestManagement: React.FC<InstructorRequestManagementProps> = 
         } finally {
             setLoadingViewSubjects(false);
         }
-    };
-
-
-    const getTopicsForSubject = (subjectId: string, subjectsArray?: any[]) => {
-        // First try to get topics from the subject object directly (populated from backend)
-        if (subjectsArray && subjectsArray.length > 0) {
-            const subject = subjectsArray.find(s => s._id === subjectId);
-            if (subject && subject.topics) {
-                return subject.topics;
-            }
-        }
-        // Fallback to filtering from the global topics array
-        return topicsForSubject.filter(topic => topic.subject === subjectId);
     };
 
 

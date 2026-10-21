@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { HeaderMultiplayerQuiz, ImageSectionMultiplayerQuiz, QuestionMultiplayerQuiz } from "../../../components";
 import { quizQuestionsData } from "../../../constants/employee/Quiz";
 import { IoArrowForwardCircle } from "react-icons/io5";
@@ -11,26 +11,11 @@ const MultiplayerQuiz = () => {
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const questionTime = 15;
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setTimeRemaining(prevTime => {
-                if (prevTime > 1) {
-                    return prevTime - 1;
-                } else {
-                    handleNextQuestion();
-                    return questionTime; // Reset timer for next question
-                }
-            });
-        }, 1000);
-
-        return () => clearInterval(timer); // Cleanup the timer
-    }, [currentQuestion]);
-
     const handleSelectAnswer = (answer: string) => {
         setSelectedAnswer(answer);
     };
 
-    const handleNextQuestion = () => {
+    const handleNextQuestion = useCallback(() => {
         setSelectedAnswers(prev => [...prev, selectedAnswer ? selectedAnswer : '']);
         setSelectedAnswer(null);
         if (currentQuestion < quizQuestionsData?.length - 1) {
@@ -47,7 +32,22 @@ const MultiplayerQuiz = () => {
             }, 0);
             alert(`You scored ${score} out of ${quizQuestionsData?.length}`);
         }
-    };
+    }, [currentQuestion, questionTime, selectedAnswer, selectedAnswers]);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTimeRemaining(prevTime => {
+                if (prevTime > 1) {
+                    return prevTime - 1;
+                } else {
+                    handleNextQuestion();
+                    return questionTime;
+                }
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [currentQuestion, handleNextQuestion, questionTime]);
 
     const handleSkip = () => {
         // Record a skipped question as an empty string

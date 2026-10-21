@@ -1,6 +1,3 @@
-import { CiClock2 } from "react-icons/ci";
-import { BsCalendar4 } from "react-icons/bs";
-import { UpcomingEventsData } from "../../../../constants/HRAdmin/Dashboard";
 const UpcomingEvents = () => {
     return (
         /*main div*/

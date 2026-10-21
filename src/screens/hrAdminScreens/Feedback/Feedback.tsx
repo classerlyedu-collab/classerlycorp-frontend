@@ -8,7 +8,7 @@ import {
 } from "../../../components";
 import { displayMessage } from "../../../config";
 import { Get, Post } from "../../../config/apiMethods";
-import { FaStar, FaComments, FaChartLine, FaUsers, FaHeart, FaThumbsUp, FaAward, FaCalendarAlt } from "react-icons/fa";
+import { FaStar, FaComments, FaChartLine, FaHeart, FaThumbsUp, FaAward, FaCalendarAlt } from "react-icons/fa";
 
 const Feedback = () => {
   const [feedbacks, setFeedback] = useState([]);

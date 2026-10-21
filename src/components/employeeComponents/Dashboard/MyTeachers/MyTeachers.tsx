@@ -48,7 +48,7 @@ const MyTeachers: React.FC<MyTeachersProps> = ({ refreshTrigger }) => {
   // Socket functionality
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token") || "";
-  const { socket, isConnected } = useSocket(token);
+  const { socket } = useSocket(token);
 
   // Join notifications room and set up presence tracking on employee side  
   useEffect(() => {

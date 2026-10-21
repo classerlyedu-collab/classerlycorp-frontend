@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Get, Put } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config";
 
@@ -61,11 +61,7 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({ assignmentId, assig
         feedback: ""
     });
 
-    useEffect(() => {
-        fetchAssignmentAndSubmissions();
-    }, [assignmentId]);
-
-    const fetchAssignmentAndSubmissions = async () => {
+    const fetchAssignmentAndSubmissions = useCallback(async () => {
         setLoading(true);
         try {
             // Fetch assignment details with rubric
@@ -84,7 +80,11 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({ assignmentId, assig
         } finally {
             setLoading(false);
         }
-    };
+    }, [assignmentId]);
+
+    useEffect(() => {
+        fetchAssignmentAndSubmissions();
+    }, [fetchAssignmentAndSubmissions]);
 
     // Calculate total max score from rubric criteria
     const calculateMaxScore = (): number => {
@@ -353,4 +353,3 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({ assignmentId, assig
 };
 
 export default SubmissionViewer;
-

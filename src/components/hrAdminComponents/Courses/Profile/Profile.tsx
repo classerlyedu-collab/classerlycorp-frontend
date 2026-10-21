@@ -1,8 +1,4 @@
 import { IoCheckmarkCircleSharp } from "react-icons/io5";
-import { homeWorkData } from "../../../../constants/HRAdmin/courses";
-import { buildStyles, CircularProgressbarWithChildren } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
-import { SlArrowRight } from "react-icons/sl";
 
 const Profile = () => {
     const getStoredUser = () => {

@@ -1,12 +1,10 @@
 
 import { useState, useCallback } from "react";
 import {
-    CompletionProgress,
     Navbar,
     QuizTopics,
     SideDrawer,
     Timeline,
-    TopPerformingStudents,
     WelcomeNoticeStudent,
     Notifications
 } from "../../../components";

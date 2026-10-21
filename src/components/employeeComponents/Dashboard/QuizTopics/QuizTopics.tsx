@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { QuizTopicsData } from "../../../../constants/employee/Dashboard";
-import { getRandomColor } from "../../../../utils/randomColorGenerator";
-import { Get, ImageLink } from "../../../../config/apiMethods";
+import { Get } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
 import { useNavigate } from "react-router-dom";
 import { RouteName } from "../../../../routes/RouteNames";

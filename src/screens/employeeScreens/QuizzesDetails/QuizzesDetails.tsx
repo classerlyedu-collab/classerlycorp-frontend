@@ -4,7 +4,7 @@ import {
     Navbar,
     SideDrawer
 } from "../../../components";
-import { Get, Post } from "../../../config/apiMethods";
+import { Get } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config";
 import { useLocation, useNavigate } from "react-router-dom";
 import { RouteName } from "../../../routes/RouteNames";
@@ -25,33 +25,6 @@ const QuizzesDetails = () => {
         "Action",
     ];
 
-    const dummyQuizzes = [
-        {
-            score: 9,
-            subject: 'Science',
-            Topic: 'Topic Name',
-            Lesson: 'Lesson name'
-        },
-        {
-            score: 9,
-            subject: 'Science',
-            Topic: 'Topic Name',
-            Lesson: 'Lesson name'
-        },
-        {
-            score: 9,
-            subject: 'Science',
-            Topic: 'Topic Name',
-            Lesson: 'Lesson name'
-        },
-        {
-            score: 9,
-            subject: 'Science',
-            Topic: 'Topic Name',
-            Lesson: 'Lesson name'
-        },
-    ];
-
     const [myresult, setMyResult] = useState<any>([])
 
     useEffect(() => {
@@ -64,7 +37,7 @@ const QuizzesDetails = () => {
                 displayMessage(d.message, "error")
             }
         })
-    }, [])
+    }, [state?.title])
     const isPassed = state?.title === "pass";
 
     return (

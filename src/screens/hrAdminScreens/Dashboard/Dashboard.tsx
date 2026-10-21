@@ -3,13 +3,6 @@ import {
     Navbar,
     SideDrawer,
     AnalyticsComponent,
-    PendingHomework,
-    Courses,
-    TasksComponent,
-    UpcomingEvents,
-    UpcomingEventsTeachers,
-    Lessons,
-    Schedule,
     Notifications,
     Timeline
 } from "../../../components";

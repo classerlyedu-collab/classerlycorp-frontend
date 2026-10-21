@@ -2,7 +2,7 @@ export const UpcomingEventsArray = [
     require('../../images/drawer/Dashboard/up1.png'),
     require('../../images/drawer/Dashboard/up2.png'),
     require('../../images/drawer/Dashboard/up3.png'),
-    require('../../images/drawer/Dashboard/up3\.png')
+    require('../../images/drawer/Dashboard/up3.png')
 
 ];
 
@@ -78,4 +78,3 @@ export const NewsObject = [
         description: 'Lorem, ipsum dolor sit amet consectetur adipisicing elit. Dolore adipisci enim in, et temporibus quos consectetur aperiam excepturi, facere quae laudantium asperiores! Cupiditate ut fugit voluptas, sint molestiae error similique?'
     },
 ];
-

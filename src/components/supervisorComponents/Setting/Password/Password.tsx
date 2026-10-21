@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { CustomInput } from "../../../customInput";
-import { DropDown } from "../../../customDropdown";
-import { gradeObject } from "../../../../constants/register";
 import { Post } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
 
@@ -11,7 +9,6 @@ const Password = () => {
   const [oldPassword, setOldPassword] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [profileImage, setProfileImage] = useState(user?.image);
 
   // error states
   const [oldPasswordError, setOldPasswordError] = useState<string>("");

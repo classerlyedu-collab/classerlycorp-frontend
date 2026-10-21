@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FormControlLabel } from "@mui/material";
 import { IOSSwitch } from "../../../../utils/settings";
 import { Post } from "../../../../config/apiMethods";
@@ -8,7 +8,7 @@ import { UseStateContext } from "../../../../context/ContextProvider";
 
 const Email = () => {
   const { updateUser } = UseStateContext();
-  let user = JSON.parse(localStorage.getItem("user") || "null");
+  const user = useMemo(() => JSON.parse(localStorage.getItem("user") || "null"), []);
 
   // data states
   const [emailNotifications, setEmailNotifications] = useState<boolean>(!!user?.emailNotification);
@@ -34,7 +34,7 @@ const Email = () => {
         displayMessage(res.message, "success");
       });
     }
-  }, [emailNotifications, user.emailNotification]);
+  }, [emailNotifications, updateUser, user.emailNotification]);
 
 
   return (

@@ -90,7 +90,7 @@ const QuizConfirmation = () => {
         setIsLoading(false);
       }
     })
-  }, []);
+  }, [searchParams]);
 
   return (
     <div className="flex flex-row w-screen h-screen max-w-[2200px] justify-center items-center mx-auto bg-mainBg flex-wrap">

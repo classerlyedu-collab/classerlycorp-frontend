@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Get, Post, Put, Delete } from '../../../config/apiMethods';
 import { displayMessage } from '../../../config';
 import { FiPlus, FiEdit2, FiTrash2, FiBookOpen, FiFileText, FiChevronRight, FiAlertTriangle } from 'react-icons/fi';
@@ -176,7 +176,7 @@ const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNa
     const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
-    const [isReordering, setIsReordering] = useState<boolean>(false);
+    const [, setIsReordering] = useState<boolean>(false);
     const [formData, setFormData] = useState({
         name: '',
         subject: '',
@@ -195,17 +195,7 @@ const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNa
         })
     );
 
-    useEffect(() => {
-        fetchTopics();
-    }, []);
-
-    useEffect(() => {
-        if (selectedSubject) {
-            fetchTopics();
-        }
-    }, [selectedSubject]);
-
-    const fetchTopics = async () => {
+    const fetchTopics = useCallback(async () => {
         try {
             setLoading(true);
             const response = await Get('/topic/all');
@@ -227,7 +217,11 @@ const TopicManagement: React.FC<TopicManagementProps> = ({ selectedSubject, onNa
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedSubject]);
+
+    useEffect(() => {
+        fetchTopics();
+    }, [fetchTopics]);
 
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;

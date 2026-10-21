@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Get, Put, Delete } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
 import { UseStateContext } from "../../../../context/ContextProvider";
@@ -7,7 +7,6 @@ import {
   BsXCircle,
   BsPeople,
   BsClock,
-  BsPersonFill,
   BsTrash
 } from "react-icons/bs";
 
@@ -18,11 +17,10 @@ interface TimelineProps {
 const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
   const { role } = UseStateContext();
   const [requests, setRequests] = useState<any[]>([])
-  const [myTeachers, setmyTeachers] = useState<any[]>([])
   const [loadingRequests, setLoadingRequests] = useState(false)
   const [processingRequest, setProcessingRequest] = useState<string | null>(null)
 
-  const getrequest = () => {
+  const getrequest = useCallback(() => {
     setLoadingRequests(true)
     const listUrl = role === 'Instructor' ? '/hr-admin/instructor/requests' : '/employee/myrequests';
     Get(listUrl).then((d) => {
@@ -37,20 +35,11 @@ const Timeline: React.FC<TimelineProps> = ({ onRequestAccepted }) => {
     }).finally(() => {
       setLoadingRequests(false)
     })
-  }
-
-  const getTeachers = () => {
-    Get("/employee/myteachers").then((d) => {
-      if (d.data?.length > 0) {
-        setmyTeachers(d.data)
-      }
-    })
-  }
+  }, [role])
 
   useEffect(() => {
-    getTeachers()
     getrequest()
-  }, [])
+  }, [getrequest])
 
   const updateRequest = (id: any, status: any) => {
     setProcessingRequest(id)

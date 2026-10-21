@@ -1,9 +1,9 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { SubjectsData } from "../../../../constants/employee/Dashboard";
 import { getRandomColor } from "../../../../utils/randomColorGenerator";
 import { RouteName } from "../../../../routes/RouteNames";
 import { useEffect, useState } from "react";
-import { Get, ImageLink } from "../../../../config/apiMethods";
+import { Get } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
 
 interface subjecttypeORM {
@@ -20,8 +20,6 @@ const Subjects = () => {
   // const [subjects, setSubjects] = useState([]);
   const [subjects, setSubjects] = useState<subjecttypeORM[]>([]);
 
-  const [loading, setLoading] = useState(false);
-
   const getStoredUser = () => {
     try {
       const raw = localStorage.getItem("user");
@@ -32,12 +30,10 @@ const Subjects = () => {
   };
   let user = getStoredUser();
   useEffect(() => {
-    setLoading(true);
     if (user?.userType === "HR-Admin") {
       Get("/hr-admin/mysubjects").then((d) => {
         if (d.success) {
           setSubjects(d.data);
-          setLoading(false);
         } else {
           displayMessage(d.message, "error");
         }
@@ -46,7 +42,6 @@ const Subjects = () => {
       Get("/employee/mysubjects").then((d) => {
         if (d.success) {
           setSubjects(d.data);
-          setLoading(false);
         } else {
           displayMessage(d.message, "error");
         }

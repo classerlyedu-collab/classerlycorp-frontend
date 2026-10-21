@@ -169,7 +169,7 @@ const SubjectManagement: React.FC<SubjectManagementProps> = ({ onNavigateToTopic
     });
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [isReordering, setIsReordering] = useState<boolean>(false);
+    const [, setIsReordering] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const sensors = useSensors(

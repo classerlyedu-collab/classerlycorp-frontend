@@ -76,7 +76,7 @@ const Lessons = () => {
 
         Get(`/topic/lesson`, topic).then(async (d) => {
             if (d.success) {
-                if (d.data?.length == 0) {
+                if (d.data?.length === 0) {
                     displayMessage("No lessons available", "error");
                 }
                 const lessonsList = d.data || [];

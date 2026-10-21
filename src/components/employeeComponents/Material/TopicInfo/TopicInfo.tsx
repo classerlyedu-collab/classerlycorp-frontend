@@ -1,7 +1,4 @@
 import { useEffect, useState } from "react";
-import { IoIosStar } from "react-icons/io";
-import { RouteName } from "../../../../routes/RouteNames";
-import { useNavigate } from "react-router-dom";
 import { Get } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
 
@@ -9,7 +6,6 @@ const TopicInfo = () => {
   const [lesson, setLesson] = useState<any>({});
   // const [timeLeft, setTimeLeft] = useState<number>(1200); // 20 minutes in seconds (20 * 60)
   // const [completed, setCompleted] = useState<boolean>(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     let sub = localStorage.getItem("lesson");
@@ -50,19 +46,6 @@ const TopicInfo = () => {
 
     //   return () => clearInterval(interval); // Cleanup on component unmount
   }, []);
-
-  const formatTime = (time: number) => {
-    const hours = Math.floor(time / 3600); // Get hours
-    const minutes = Math.floor((time % 3600) / 60); // Get remaining minutes after hours
-    const seconds = time % 60; // Get remaining seconds
-
-    const paddedHours = hours < 10 ? `0${hours}` : hours;
-    const paddedMinutes = minutes < 10 ? `0${minutes}` : minutes;
-    const paddedSeconds = seconds < 10 ? `0${seconds}` : seconds;
-
-    return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`; // Ensure two-digit display for hours, minutes, and seconds
-  };
-
 
   return (
     <div className="w-full bg-white h-full py-5 px-4 rounded-2xl">

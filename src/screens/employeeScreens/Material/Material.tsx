@@ -1,6 +1,6 @@
-import { TextEditor, TopicInfo, Navbar, SideDrawer } from "../../../components";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { TextEditor, Navbar, SideDrawer } from "../../../components";
+import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
 import { MdArrowBack, MdAccessTime, MdLanguage, MdDescription, MdBook, MdNote } from "react-icons/md";
 import { Get, Put } from "../../../config/apiMethods";
 
@@ -24,7 +24,6 @@ import { Get, Put } from "../../../config/apiMethods";
  * - Save progress: PUT /topic/lesson/progress/{lessonId} { progress, notes }
  */
 const Material = () => {
-    const [searchParams] = useSearchParams();
     const [lesson, setLesson] = useState<any>({});
     const [progress, setProgress] = useState(0);
     const [notes, setNotes] = useState("");
@@ -33,7 +32,6 @@ const Material = () => {
     const [scrollPosition, setScrollPosition] = useState(0);
     const [maxScrollPosition, setMaxScrollPosition] = useState(0);
     const navigate = useNavigate();
-    const content = searchParams.get('content');
 
     useEffect(() => {
         const lessonData = localStorage.getItem("lesson");
@@ -77,7 +75,7 @@ const Material = () => {
     };
 
     // Auto-save progress to backend (only when progress increases); underlying logic assures it is called only if higher
-    const saveProgressToDatabase = async (newProgress: number, newNotes?: string) => {
+    const saveProgressToDatabase = useCallback(async (newProgress: number, newNotes?: string) => {
         if (!lesson?._id) {
             console.warn("Cannot save: lesson ID not available");
             return;
@@ -94,10 +92,10 @@ const Material = () => {
         } catch (error) {
             console.error("Error auto-saving progress:", error);
         }
-    };
+    }, [lesson?._id, notes]);
 
     // Calculate progress based on time and scroll behavior
-    const calculateProgress = () => {
+    const calculateProgress = useCallback(() => {
         // Scroll-based progress (70% weight)
         const scrollRatio = maxScrollPosition > 0 ? Math.min(scrollPosition / maxScrollPosition, 1) : 0;
         const scrollProgress = scrollRatio * 100;
@@ -111,7 +109,7 @@ const Material = () => {
         // Cap at 100% and ensure confident reading (min 10% for engaged users)
         // Progress calculations will be validated elsewhere to never decrease
         return Math.max(Math.min(combinedProgress, 100), timeSpent > 300 ? 10 : 0); // 5min = 10% min
-    };
+    }, [maxScrollPosition, scrollPosition, timeSpent]);
 
     // Track activity and update progress (only upwards - never decrease)
     useEffect(() => {
@@ -127,7 +125,7 @@ const Material = () => {
         // Update progress frequently for better tracking
         const progressInterval = setInterval(updateProgress, 3000); // Every 3 seconds  
         return () => clearInterval(progressInterval);
-    }, [scrollPosition, maxScrollPosition, timeSpent, progress]);
+    }, [scrollPosition, maxScrollPosition, timeSpent, progress, calculateProgress, saveProgressToDatabase]);
 
     // Monitor time spent (active engagement tracking)
     useEffect(() => {
@@ -186,9 +184,7 @@ const Material = () => {
 
                 // Increase max scroll if we scroll past current max
                 const documentHeight = document.documentElement.scrollHeight;
-                if (documentHeight > maxScrollPosition) {
-                    setMaxScrollPosition(documentHeight);
-                }
+                setMaxScrollPosition(current => Math.max(documentHeight, current));
             }, 100);
         };
 
@@ -208,8 +204,8 @@ const Material = () => {
             setScrollPosition(scrollTop);
 
             const documentHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            if (documentHeight > 0 && documentHeight !== maxScrollPosition) {
-                setMaxScrollPosition(Math.max(documentHeight, maxScrollPosition));
+            if (documentHeight > 0) {
+                setMaxScrollPosition(current => Math.max(documentHeight, current));
             }
         }, 5000);
 
@@ -265,7 +261,7 @@ const Material = () => {
 
             // Send to database only if higher than current
             if (percentage > progress) {
-                const response = await Put(`/topic/lesson/progress/${lesson._id}`, {
+                await Put(`/topic/lesson/progress/${lesson._id}`, {
                     progress: percentage,
                     notes: notes || ""
                 });

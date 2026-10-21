@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CustomInput, DropDown, Navbar, SideDrawer } from "../../../components";
+import { Navbar, SideDrawer } from "../../../components";
 import { TextField, FormControl, InputLabel, Select, MenuItem, Radio, FormControlLabel, Button, Chip, List, ListItem, ListItemText, Stack, IconButton, Tooltip, Divider, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from "@mui/material";
 import { DeleteOutline, EditOutlined } from "@mui/icons-material";
 import { Get, Post } from "../../../config/apiMethods";
@@ -20,8 +20,8 @@ const Courses = () => {
   const [topic, setTopic] = useState<string | number | null>(null);
   const [subject, setSubject] = useState<string | number | null>(null);
   const [quizType, setQuizType] = useState<string | number | null>('private');
-  const [subjectError, setSubjectError] = useState<string>("");
-  const [topicError, setTopicError] = useState<string>("");
+  const [, setSubjectError] = useState<string>("");
+  const [, setTopicError] = useState<string>("");
 
   const [correctQuestion, setCorrectQuestion] = useState<
     string | number | null
@@ -44,9 +44,9 @@ const Courses = () => {
   const [optionCError, setOptionCError] = useState<string>("");
   const [optionDError, setOptionDError] = useState<string>("");
   const [correctQuestionError, setCorrectQuestionError] = useState<string>("");
-  const [scoreError, setScoreError] = useState<string>("");
+  const [, setScoreError] = useState<string>("");
   const [timeError, setTimeError] = useState<string>("");
-  const [isEdit, setIsEdit] = useState(false)
+  const [isEdit] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [quizzes, setQuizzes] = useState<any[]>([])
   const [loadingQuizzes, setLoadingQuizzes] = useState(false)
@@ -64,13 +64,6 @@ const Courses = () => {
     }
     return true;
   });
-
-  const correctQuestionData = [
-    { label: "Option A", value: 1 },
-    { label: "Option B", value: 2 },
-    { label: "Option C", value: 3 },
-    { label: "Option D", value: 4 },
-  ];
 
   const handleAddQuestion = () => {
     // Reset errors

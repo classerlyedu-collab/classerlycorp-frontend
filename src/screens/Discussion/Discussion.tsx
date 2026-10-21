@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { Navbar, SideDrawer, RichTextEditor } from '../../components';
 import { Get, Post, Put, Delete } from '../../config/apiMethods';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { RouteName } from '../../routes/RouteNames';
 import { displayMessage } from '../../config';
 import DOMPurify from 'dompurify';
@@ -51,7 +51,6 @@ const Discussion: React.FC = () => {
 
 
     const { subjectId, topicId, lessonId } = useParams<{ subjectId: string; topicId: string; lessonId: string }>();
-    const navigate = useNavigate();
 
     // Helper function to strip HTML tags for validation
     const stripHtml = (html: string) => {
@@ -66,7 +65,7 @@ const Discussion: React.FC = () => {
             ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'ol', 'ul', 'li', 'a', 'img', 'iframe', 'video', 'source'],
             ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow', 'controls', 'type', 'poster', 'preload'],
             ALLOWED_STYLES: ['color', 'background-color', 'max-width'],
-            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i
         });
     };
 
@@ -82,12 +81,58 @@ const Discussion: React.FC = () => {
         setRole(ctxUser?.userType || null);
     }, []);
 
+    const loadThreads = useCallback(() => {
+        if (!lessonId) return;
+        setLoading(true);
+
+        Get(`/discussions/lessons/${lessonId}/threads`)
+            .then((d) => {
+                if (d.success) {
+                    const threadData = Array.isArray(d.data) ? d.data : [];
+                    const threadsWithMessages = threadData.map((thread: any) => ({
+                        ...thread,
+                        messages: thread.messages || []
+                    }));
+                    setThreads(threadsWithMessages);
+                } else {
+                    displayMessage(d.message || 'Failed to load discussions', 'error');
+                }
+            })
+            .catch(() => displayMessage('Failed to load discussions', 'error'))
+            .finally(() => setLoading(false));
+    }, [lessonId]);
+
+    const loadLessonDetails = useCallback(async () => {
+        if (!subjectId || !topicId || !lessonId) return;
+
+        try {
+            const subjectRes = await Get('/discussions/subjects');
+            if (subjectRes.success) {
+                const subjectData = subjectRes.data?.find((s: any) => s._id === subjectId);
+                setSubject(subjectData || null);
+            }
+
+            const topicRes = await Get(`/discussions/subjects/${subjectId}/topics`);
+            if (topicRes.success) {
+                const topicData = topicRes.data?.find((t: any) => t._id === topicId);
+                setTopic(topicData || null);
+            }
+
+            const lessonRes = await Get(`/discussions/topics/${topicId}/lessons`);
+            if (lessonRes.success) {
+                const lessonData = lessonRes.data?.find((l: any) => l._id === lessonId);
+                setLesson(lessonData || null);
+            }
+        } catch (error) {
+            console.error('Failed to load lesson details:', error);
+        }
+    }, [lessonId, subjectId, topicId]);
+
     useEffect(() => {
         if (!role || !lessonId) return;
-        // Always load threads on initial load (when lessonId changes)
         loadThreads();
         loadLessonDetails();
-    }, [role, lessonId]);
+    }, [role, lessonId, loadThreads, loadLessonDetails]);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -106,57 +151,6 @@ const Discussion: React.FC = () => {
         document.addEventListener('click', handleClickOutside);
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
-
-    const loadThreads = () => {
-        if (!lessonId) return;
-        setLoading(true);
-
-        Get(`/discussions/lessons/${lessonId}/threads`)
-            .then((d) => {
-                if (d.success) {
-                    const threadData = Array.isArray(d.data) ? d.data : [];
-                    // Ensure each thread has a messages array
-                    const threadsWithMessages = threadData.map((thread: any) => ({
-                        ...thread,
-                        messages: thread.messages || []
-                    }));
-                    setThreads(threadsWithMessages);
-                } else {
-                    displayMessage(d.message || 'Failed to load discussions', 'error');
-                }
-            })
-            .catch(() => displayMessage('Failed to load discussions', 'error'))
-            .finally(() => setLoading(false));
-    };
-
-    const loadLessonDetails = async () => {
-        if (!subjectId || !topicId || !lessonId) return;
-
-        try {
-            // Load subject
-            const subjectRes = await Get('/discussions/subjects');
-            if (subjectRes.success) {
-                const subjectData = subjectRes.data?.find((s: any) => s._id === subjectId);
-                setSubject(subjectData || null);
-            }
-
-            // Load topic
-            const topicRes = await Get(`/discussions/subjects/${subjectId}/topics`);
-            if (topicRes.success) {
-                const topicData = topicRes.data?.find((t: any) => t._id === topicId);
-                setTopic(topicData || null);
-            }
-
-            // Load lesson
-            const lessonRes = await Get(`/discussions/topics/${topicId}/lessons`);
-            if (lessonRes.success) {
-                const lessonData = lessonRes.data?.find((l: any) => l._id === lessonId);
-                setLesson(lessonData || null);
-            }
-        } catch (error) {
-            console.error('Failed to load lesson details:', error);
-        }
-    };
 
     const createThread = async () => {
         if (!canCreate || !lessonId) return;

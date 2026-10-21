@@ -2,16 +2,10 @@
 
 
 import { useSearchParams } from 'react-router-dom';
-import { ImageLink } from '../../../../config/apiMethods';
 const TextEditor = () => {
     const [searchParams] = useSearchParams();
     const content = searchParams.get('content');
     const contentType = searchParams.get('contentType') || 'google_docs';
-
-    // Helper function to detect if content is YouTube embed URL
-    const isYouTubeEmbed = (url: string) => {
-        return url && url.includes('youtube.com/embed/');
-    };
 
     // Helper function to detect if content is YouTube URL
     const isYouTubeUrl = (url: string) => {

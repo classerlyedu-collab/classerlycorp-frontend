@@ -1,12 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { yourTopicsData } from "../../../../constants/employee/Subjects"; // Importing topics data from the constants
-import { getRandomColor } from "../../../../utils/randomColorGenerator"; // Importing a utility function to get a random color
 import { RouteName } from "../../../../routes/RouteNames";
-import { useEffect, useState } from "react";
-
-import { useSearchParams } from "react-router-dom";
-import { Get } from "../../../../config/apiMethods";
-import { displayMessage } from "../../../../config";
 
 // interface topictypeORM {
 //   name: String;
@@ -57,10 +50,6 @@ const YourTopics = ({ topic, loading, topicProgress = {} }: any) => {
   };
 
   // Extract progress percentage from status string
-  const getProgressPercentage = (status: string) => {
-    const match = status?.match(/(\d+)%/);
-    return match ? parseInt(match[1]) : 0;
-  };
   // const [topic, setTopics] = useState<topictypeORM[]>([]);
   // const [searchParams] = useSearchParams();
 

@@ -1,4 +1,3 @@
-import { NewCoursesData } from "../../../../constants/HRAdmin/courses";
 import { SlArrowRight } from "react-icons/sl";
 import { getRandomColor } from "../../../../utils/randomColorGenerator";
 

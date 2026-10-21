@@ -1,10 +1,4 @@
-import { useState, useEffect } from "react";
-import {
-  BodySoloQuiz,
-  FooterSoloQuiz,
-  HeaderSoloQuiz,
-} from "../../../components";
-import { quizQuestionsData } from "../../../constants/employee/Quiz";
+import { useCallback, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Post } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config";
@@ -15,12 +9,11 @@ import { MdTimer, MdQuestionAnswer, MdCheckCircle, MdArrowForward } from "react-
 const SoloQuiz = () => {
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
   const [timeRemaining, setTimeRemaining] = useState<number>(15);
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const location = useLocation();
-  const [quizdata, setQuizData] = useState<any>(location.state);
+  const quizdata = location.state;
   const [randomQuestions, setRandomQuestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [questionTime, setQuestionTime] = useState<number>(30); // Default fallback time
@@ -137,40 +130,15 @@ const SoloQuiz = () => {
     }
   }, [quizdata]);
 
-  useEffect(() => {
-    // Don't start timer if we're at the end of questions
-    if (currentQuestion >= randomQuestions?.length) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prevTime) => {
-        if (prevTime > 1) {
-          return prevTime - 1;
-        } else {
-          handleNextQuestion();
-          return questionTime; // Reset timer for next question
-        }
-      });
-    }, 1000);
-
-    return () => clearInterval(timer); // Cleanup the timer
-  }, [currentQuestion, randomQuestions?.length, questionTime]);
-
   const handleSelectAnswer = (answer: string) => {
     setSelectedAnswer(answer);
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = useCallback(() => {
     // Early return if we're already at the end of questions
     if (currentQuestion >= randomQuestions?.length) {
       return;
     }
-
-    setSelectedAnswers((prev) => [
-      ...prev,
-      selectedAnswer ? selectedAnswer : "",
-    ]);
 
     // Find the original index of the current random question in the original questions array
     const currentRandomQuestion = randomQuestions[currentQuestion];
@@ -245,7 +213,25 @@ const SoloQuiz = () => {
       //     return total;
       //   }, 0);
     }
-  };
+  }, [currentQuestion, navigate, questionTime, quizdata, randomQuestions, selectedAnswer]);
+
+  useEffect(() => {
+    if (currentQuestion >= randomQuestions?.length) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeRemaining((prevTime) => {
+        if (prevTime > 1) {
+          return prevTime - 1;
+        }
+        handleNextQuestion();
+        return questionTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [currentQuestion, handleNextQuestion, questionTime, randomQuestions?.length]);
 
   // Show loading screen while selecting random questions
   if (isLoading) {

@@ -1,7 +1,4 @@
-import { useEffect, useState } from "react";
-import { CustomInput } from "../../../customInput";
-import { DropDown } from "../../../customDropdown";
-import { gradeObject } from "../../../../constants/register";
+import { useEffect, useMemo, useState } from "react";
 import { FormControlLabel } from "@mui/material";
 import { IOSSwitch } from "../../../../utils/settings";
 import { Post } from "../../../../config/apiMethods";
@@ -10,11 +7,11 @@ import { UseStateContext } from "../../../../context/ContextProvider";
 
 const Notification = () => {
   const { updateUser } = UseStateContext();
-  let user = JSON.parse(localStorage.getItem("user") || "null");
+  const user = useMemo(() => JSON.parse(localStorage.getItem("user") || "null"), []);
 
   // data states
   const [notifications, setNotifications] = useState<boolean>(!!user?.notification);
-  const [profileImage, setProfileImage] = useState(user?.image);
+  const [profileImage] = useState(user?.image);
   useEffect(() => {
 
     if (user && notifications !== !!user?.notification) {
@@ -32,7 +29,7 @@ const Notification = () => {
         displayMessage(res.message, "success");
       });
     }
-  }, [notifications]);
+  }, [notifications, updateUser, user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">

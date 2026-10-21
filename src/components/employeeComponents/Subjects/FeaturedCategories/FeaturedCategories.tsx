@@ -3,7 +3,7 @@ import { featuredArray } from "../../../../constants/employee/Subjects";
 import { getRandomColor } from "../../../../utils/randomColorGenerator";
 import { RouteName } from "../../../../routes/RouteNames";
 import { useEffect, useState } from "react";
-import { Get, ImageLink } from "../../../../config/apiMethods";
+import { Get } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
 
 interface subjecttypeORM {
@@ -22,31 +22,8 @@ const FeaturedCategories = () => {
 
     const [loading, setLoading] = useState(false);
 
-    const getStoredUser = () => {
-        try {
-            const raw = localStorage.getItem("user");
-            return raw ? JSON.parse(raw) : {};
-        } catch {
-            return {} as any;
-        }
-    };
-    let user = getStoredUser();
     useEffect(() => {
         setLoading(true);
-        let grade = ""
-
-
-        if (user?.userType == "Teacher") {
-
-            grade = user?.profile?.grade.map((i: any) => { return i._id }).join(",")
-
-        } else {
-            grade = user?.profile?.grade?._id
-
-        }
-
-
-
         // Grade-dependent subject fetching removed in corporate model
         // Fetch all subjects instead
         Get('/subject').then((d) => {

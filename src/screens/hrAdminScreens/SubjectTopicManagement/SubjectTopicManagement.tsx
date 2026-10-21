@@ -3,7 +3,6 @@ import { Navbar, SideDrawer } from '../../../components';
 import { SubjectManagement } from '../../../components/hrAdminComponents/Subjects';
 import { TopicManagement } from '../../../components/hrAdminComponents/Topics';
 import { LessonManagement } from '../../../components/hrAdminComponents/Lessons';
-import { FiBookOpen, FiGrid, FiFileText } from 'react-icons/fi';
 import { useSubscriptionStatus } from '../../../hooks/useSubscriptionStatus.hook';
 import { useNavigate } from 'react-router-dom';
 import { RouteName } from '../../../routes/RouteNames';

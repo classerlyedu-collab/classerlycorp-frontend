@@ -1,20 +1,14 @@
-import { useEffect, useState } from "react";
-import { CustomInput } from "../../../customInput";
-import { DropDown } from "../../../customDropdown";
-import { Get, Post } from "../../../../config/apiMethods";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Post } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
-import { MultiDropDown } from "../../../multiselectDropdown";
-import { useNavigate } from "react-router-dom";
 import { UseStateContext } from "../../../../context/ContextProvider";
+import { CustomInput } from "../../../customInput";
 
 const Information = () => {
-  const navigate = useNavigate();
-
   const {
     setHasChanges,
     isModalOpen,
     setIsModalOpen,
-    hasChanges,
     updateUser
   } = UseStateContext();
 
@@ -35,13 +29,14 @@ const Information = () => {
       return {} as any;
     }
   };
-  let user = getStoredUser();
+  const user = useMemo(getStoredUser, []);
   const [userName, setUserName] = useState<string>(user?.userName);
-  const [surname, setSurname] = useState<string>("");
   const [email, setEmail] = useState<string>(user?.email);
-  const [grade, setGrade] = useState<any>("");
-  const [gradet, setGradet] = useState<any>(
-    []
+  const [grade, setGrade] = useState<any>(user?.profile?.grade?._id || "");
+  const [gradet, setGradet] = useState<any[]>(() =>
+    Array.isArray(user?.profile?.grade)
+      ? user.profile.grade.map((item: any) => item?._id || item)
+      : []
   );
 
   const [profileImage, setProfileImage] = useState(user?.image);
@@ -52,11 +47,10 @@ const Information = () => {
 
   // error states
   const [userNameError, setUserNameError] = useState<string>("");
-  const [surnameError, setSurnameError] = useState<string>("");
   const [emailError, setEmailError] = useState<string>("");
   // const [gradeData, setGradeData] = useState([]);
 
-  const checkForChanges = () => {
+  const checkForChanges = useCallback(() => {
     try {
       // Helper function to compare two arrays (order-sensitive)
       const arraysMatch = (arr1: any, arr2: any) => {
@@ -85,11 +79,11 @@ const Information = () => {
       setHasChanges(false);
       return false;
     }
-  };
+  }, [userName, user, grade, profileImage, gradet, email, setHasChanges]);
 
   useEffect(() => {
     checkForChanges();
-  }, [email, userName, grade, profileImage, gradet]);
+  }, [checkForChanges]);
 
   const handleDiscardClick = () => {
     try {
@@ -216,21 +210,15 @@ const Information = () => {
     input.click();
   };
 
-  const handleDeleteClick = () => {
-    setprofileimagechange(true);
-    setProfileImage("");
-
-  };
-
   const handleUpdateClick = () => {
     let reqbody: any = {};
-    if (email != user?.email) {
+    if (email !== user?.email) {
       reqbody.email = email;
     }
-    if (userName != user?.userName) {
+    if (userName !== user?.userName) {
       reqbody.userName = userName;
     }
-    if (user?.userType == "Teacher") {
+    if (user?.userType === "Teacher") {
       reqbody.grade = gradet;
     } else {
       reqbody.grade = grade;
@@ -238,7 +226,7 @@ const Information = () => {
 
     // Only include image data if there are changes and it's not already saved
     if (profileimagechange) {
-      if (profileImage == null || profileImage == "") {
+      if (profileImage == null || profileImage === "") {
         reqbody.image = "";
         reqbody.imageMetadata = null;
       } else {
@@ -281,65 +269,6 @@ const Information = () => {
       displayMessage(error.message || "Update failed", "error");
     });
   };
-
-  useEffect(() => {
-
-    if (user?.userType === "HR-Admin") {
-      // For teachers, grade is an array of ObjectIds (not populated)
-      if (user?.profile?.grade && Array.isArray(user?.profile?.grade)) {
-        // Check if it's populated grade objects or just ObjectIds
-        if (user?.profile?.grade[0] && typeof user?.profile?.grade[0] === 'object' && user?.profile?.grade[0]._id) {
-          // It's populated grade objects
-          setGradet(user?.profile?.grade?.map((i: any) => {
-            return i._id;
-          }))
-        } else {
-          // It's ObjectIds, use them directly
-          setGradet(user?.profile?.grade || [])
-        }
-      } else {
-        setGradet([])
-      }
-    } else {
-      setGrade(user?.profile?.grade?._id)
-    }
-
-    // Removed grade API usage in corporate model
-    if (gradet?.join(",") == undefined) {
-      navigate("/")
-    }
-    // if(user?.userType=="Teacher"){
-
-    //   Get(`/subject/grade/${user?.profile?.grade?.map((i: any) => {
-    //     return i._id;
-    //   })?.join(",")}`)
-    //     .then((d) => {
-    //       if (d.success) {
-    //         setCourseData(d.data);
-    //       } else {
-    //         displayMessage(d.message);
-    //       }
-    //     })
-    //     .catch((e) => {
-    //       displayMessage(e.message);
-    //     });
-    // }else{
-
-
-    //   Get(`/subject/grade/${user?.profile?.grade?._id}`)
-    //     .then((d) => {
-    //       if (d.success) {
-    //         setCourseData(d.data);
-    //       } else {
-    //         displayMessage(d.message);
-    //       }
-    //     })
-    //     .catch((e) => {
-    //       displayMessage(e.message);
-    //     });
-    // }
-  }, []);
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -589,4 +518,3 @@ const Information = () => {
 };
 
 export default Information;
-

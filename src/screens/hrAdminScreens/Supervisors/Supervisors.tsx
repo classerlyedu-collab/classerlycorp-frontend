@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Navbar, SideDrawer } from "../../../components";
-import { UseStateContext } from "../../../context/ContextProvider";
 import { Get, Put, Delete } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config";
 
@@ -32,7 +31,6 @@ interface Supervisor {
 }
 
 const Supervisors: React.FC = () => {
-    const { role } = UseStateContext();
     const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");

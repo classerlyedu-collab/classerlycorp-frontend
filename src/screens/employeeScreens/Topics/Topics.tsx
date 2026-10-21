@@ -77,7 +77,7 @@ const Topics = () => {
         //  (  d.data
         //    )
         let mn = await d.data.map((i: any) => {
-          let s = 0, m = 0, p = 0;
+          let s = 0, m = 0;
 
           // Ensure quizes is an array
           const quizes = Array.isArray(i.quizes) ? i.quizes : [];
@@ -140,7 +140,7 @@ const Topics = () => {
 
     // Cleanup interval on component unmount
     // return () => clearInterval(interval);
-  }, []);
+  }, [searchParams]);
   return (
     <div className="flex flex-row w-screen h-screen max-w-[2200px] justify-center items-center mx-auto bg-mainBg flex-wrap">
       {/* Sidebar */}

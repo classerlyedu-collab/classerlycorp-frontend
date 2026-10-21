@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { Get } from "../../../../config/apiMethods";
-import { displayMessage } from "../../../../config";
 
 const SupervisorWelcomeNotice = () => {
     const [currentTime, setCurrentTime] = useState(new Date());

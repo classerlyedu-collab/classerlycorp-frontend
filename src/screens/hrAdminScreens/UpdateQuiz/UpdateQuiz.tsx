@@ -6,7 +6,6 @@ import { Get, Post, Put } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config";
 import { useLocation, useNavigate } from "react-router-dom";
 import { RouteName } from "../../../routes/RouteNames";
-import { Quiz } from "../../../components/hrAdminComponents/Quiz";
 
 const UpdateQuiz = () => {
   const location = useLocation();
@@ -23,9 +22,9 @@ const UpdateQuiz = () => {
   const [lesson, setLesson] = useState<string | number | null>(location?.state?.lesson?._id ?? null)
   const [topic, setTopic] = useState<string | number | null>(location?.state?.topic?._id ?? null);
   const [subject, setSubject] = useState<string | number | null>(location?.state?.subject?._id ?? null);
-  const [subjectError, setSubjectError] = useState<string>("");
-  const [topicError, setTopicError] = useState<string>("");
-  const [lessonError, setLessonError] = useState<string>("");
+  const [, setSubjectError] = useState<string>("");
+  const [, setTopicError] = useState<string>("");
+  const [, setLessonError] = useState<string>("");
   const [quizType, setQuizType] = useState<string | number | null>(location?.state?.type);
 
   const [correctQuestion, setCorrectQuestion] = useState<
@@ -80,7 +79,7 @@ const UpdateQuiz = () => {
   const [optionCError, setOptionCError] = useState<string>("");
   const [optionDError, setOptionDError] = useState<string>("");
   const [correctQuestionError, setCorrectQuestionError] = useState<string>("");
-  const [scoreError, setScoreError] = useState<string>("");
+  const [, setScoreError] = useState<string>("");
   const [timeError, setTimeError] = useState<string>("");
   const [isEdit, setIsEdit] = useState(!!location?.state?._id)
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
@@ -100,13 +99,6 @@ const UpdateQuiz = () => {
     }
     return true;
   });
-
-  const correctQuestionData = [
-    { label: "Option A", value: 1 },
-    { label: "Option B", value: 2 },
-    { label: "Option C", value: 3 },
-    { label: "Option D", value: 4 },
-  ];
 
   const handleAddQuestion = () => {
     // Reset errors
@@ -205,90 +197,10 @@ const UpdateQuiz = () => {
     setShowQuestionModal(true);
   };
 
-  const handleUpdateQuestion = () => {
-    // Reset errors
-    setQuestionError("");
-    setOptionAError("");
-    setOptionBError("");
-    setOptionCError("");
-    setOptionDError("");
-    setCorrectQuestionError("");
-    setScoreError("");
-
-    // Validation: Ensure all fields are filled
-    if (!questionName) {
-      setQuestionError("Please fill out the question.");
-      return;
-    }
-    if (!optionA) {
-      setOptionAError("Please fill out option A.");
-      return;
-    }
-    if (!optionB) {
-      setOptionBError("Please fill out option B.");
-      return;
-    }
-    if (!optionC) {
-      setOptionCError("Please fill out option C.");
-      return;
-    }
-    if (!optionD) {
-      setOptionDError("Please fill out option D.");
-      return;
-    }
-    if (!correctQuestion) {
-      setCorrectQuestionError("Please select the correct answer.");
-      return;
-    }
-    if (!score) {
-      setScoreError("Please enter the question score.");
-      return;
-    }
-
-    // Update the question in the list
-    const updatedQuestion = {
-      questionName,
-      options: { A: optionA, B: optionB, C: optionC, D: optionD },
-      correctQuestion,
-      score: parseInt(score, 10),
-    };
-
-    const updatedQuestions = [...questions];
-    updatedQuestions[editingQuestionIndex!] = updatedQuestion;
-    setQuestions(updatedQuestions);
-
-    // Recalculate total score
-    const newTotalScore = updatedQuestions.reduce((sum, q) => sum + q.score, 0);
-    setTotalScore(newTotalScore);
-
-    // Reset fields and editing state
-    setQuestionName("");
-    setOptionA("");
-    setOptionB("");
-    setOptionC("");
-    setOptionD("");
-    setCorrectQuestion(null);
-    setScore("");
-    setEditingQuestionIndex(null);
-  };
-
   const handleDeleteQuestion = (index: number) => {
     setPendingDeleteIndex(index);
     setConfirmDeleteOpen(true);
   };
-
-  const handleCancelEdit = () => {
-    setQuestionName("");
-    setOptionA("");
-    setOptionB("");
-    setOptionC("");
-    setOptionD("");
-    setCorrectQuestion(null);
-    setScore("");
-    setEditingQuestionIndex(null);
-    setShowQuestionModal(false);
-  };
-
 
   useEffect(() => {
     Get("/subject").then((d) => {

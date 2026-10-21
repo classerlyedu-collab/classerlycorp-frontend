@@ -1,6 +1,4 @@
 import { StudentsData } from "../../../../constants/HRAdmin/MyStudents";
-import { CiClock2 } from "react-icons/ci";
-import { getRandomColor } from "../../../../utils/randomColorGenerator";
 import { useEffect, useState, useRef } from "react";
 import { Get, Post, Delete, Put } from "../../../../config/apiMethods";
 import { displayMessage } from "../../../../config";
@@ -60,7 +58,7 @@ export const MyEmployees = () => {
   // Socket functionality
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token") || "";
-  const { socket, isConnected } = useSocket(token);
+  const { socket } = useSocket(token);
 
   // Set up comment socket for current conversation 
   useCommentSocket({

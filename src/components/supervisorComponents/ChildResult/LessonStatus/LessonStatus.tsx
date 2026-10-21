@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Progress } from "rsuite";
 import { ChildResultType } from "../../../../types/parent/ChildOverview";
-import { getRandomColor } from "../../../../utils/randomColorGenerator";
 import { FaChevronDown, FaChevronRight, FaBookOpen, FaClock, FaCheckCircle, FaChevronLeft, FaChevronRight as FaChevronRightIcon } from "react-icons/fa";
 
 interface PropsTypes {

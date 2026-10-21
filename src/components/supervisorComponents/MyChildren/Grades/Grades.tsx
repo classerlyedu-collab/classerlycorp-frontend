@@ -1,12 +1,11 @@
 import { buildStyles, CircularProgressbarWithChildren } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
-import { getRandomColor } from "../../../../utils/randomColorGenerator";
 import { useEffect, useState } from "react";
 import { displayMessage } from "../../../../config";
 import { Get } from "../../../../config/apiMethods";
 import { RouteName } from "../../../../routes/RouteNames";
 import { useNavigate } from "react-router-dom";
-import { FaBookOpen, FaChartBar, FaArrowRight, FaGraduationCap, FaTrophy, FaClock } from "react-icons/fa";
+import { FaBookOpen, FaArrowRight, FaGraduationCap, FaClock } from "react-icons/fa";
 
 const Grades = ({ mystd }: any) => {
     const navigate = useNavigate();

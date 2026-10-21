@@ -16,9 +16,7 @@ const Quiz = ({ onLoadToEditor }: { onLoadToEditor?: (q: any) => void }) => {
   // const [quiz, setquiz] = useState([]);
   const [quiz, setQuiz] = useState<any[]>([]);
 
-  const [loading, setLoading] = useState(false);
-
-  let user = JSON.parse(localStorage.getItem("user") || "");
+  const user = JSON.parse(localStorage.getItem("user") || "");
   useEffect(() => {
     setLoading(true);
 
@@ -34,7 +32,7 @@ const Quiz = ({ onLoadToEditor }: { onLoadToEditor?: (q: any) => void }) => {
         displayMessage(d.message, "error");
       }
     });
-  }, []);
+  }, [user?.profile?._id, user?.userType]);
   return (
     <div className="w-full">
       {quiz.length === 0 ? (

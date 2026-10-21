@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Get, Post } from '../../config/apiMethods';
 import { FaBell, FaTimes, FaClock } from 'react-icons/fa';
 
@@ -34,21 +34,7 @@ const Notifications: React.FC<NotificationsProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [disabledMsg, setDisabledMsg] = useState<string | null>(null);
 
-    useEffect(() => {
-        try {
-            const raw = localStorage.getItem('user');
-            const user = raw ? JSON.parse(raw) : null;
-            if (user && user.notification === false) {
-                setDisabledMsg('In-app notifications are disabled in your Settings. Enable notifications to see updates.');
-                setNotifications([]);
-                setLoading(false);
-                return;
-            }
-        } catch { }
-        fetchNotifications();
-    }, []);
-
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -56,7 +42,6 @@ const Notifications: React.FC<NotificationsProps> = ({
             const response = await Get('/auth/notifications');
 
             if (response.success) {
-                // Limit the number of notifications displayed
                 const limitedNotifications = (response.data || []).slice(0, maxNotifications);
                 setNotifications(limitedNotifications);
                 if (Array.isArray(response.data) && response.data.length === 0 && response.message === 'Notifications disabled for user') {
@@ -73,7 +58,21 @@ const Notifications: React.FC<NotificationsProps> = ({
         } finally {
             setLoading(false);
         }
-    };
+    }, [maxNotifications]);
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem('user');
+            const user = raw ? JSON.parse(raw) : null;
+            if (user && user.notification === false) {
+                setDisabledMsg('In-app notifications are disabled in your Settings. Enable notifications to see updates.');
+                setNotifications([]);
+                setLoading(false);
+                return;
+            }
+        } catch { }
+        fetchNotifications();
+    }, [fetchNotifications]);
 
     const markAsRead = async (id: string) => {
         try {

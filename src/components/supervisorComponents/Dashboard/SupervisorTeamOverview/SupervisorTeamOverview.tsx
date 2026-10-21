@@ -68,18 +68,6 @@ const SupervisorTeamOverview: React.FC<SupervisorTeamOverviewProps> = ({ refresh
         return name.split(' ').map(n => n[0]).join('').toUpperCase();
     };
 
-    const getTimeAgo = (dateString?: string) => {
-        if (!dateString) return "Unknown";
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-
-        if (diffInHours < 1) return "Just now";
-        if (diffInHours < 24) return `${diffInHours}h ago`;
-        const diffInDays = Math.floor(diffInHours / 24);
-        return `${diffInDays}d ago`;
-    };
-
     if (loading) {
         return (
             <div className="space-y-4">

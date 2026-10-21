@@ -5,7 +5,7 @@ import { App } from 'antd';
 
 export let displayMessage;
 export default function MasterContainer({ children }) {
-    const { message, modal, notification } = App.useApp();
+    const { message } = App.useApp();
     const [errorProperty, setErrorProperty] = useState({
         message: null,
         type: null,

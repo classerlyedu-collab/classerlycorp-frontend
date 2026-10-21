@@ -1,13 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { Get, Post } from '../../../config/apiMethods';
-import { UseStateContext } from '../../../context/ContextProvider';
 import { Navbar, SideDrawer } from '../../../components';
 import { useSubscriptionStatus } from '../../../hooks/useSubscriptionStatus.hook';
 
 const PRICE_ID = process.env.REACT_APP_STRIPE_PRICE_ID || '';
 
 const Subscription: React.FC = () => {
-    const { role } = UseStateContext();
     const { refreshSubscriptionStatus } = useSubscriptionStatus();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
@@ -17,7 +15,7 @@ const Subscription: React.FC = () => {
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const termsContentRef = useRef<HTMLDivElement>(null);
 
-    const fetchStatus = async () => {
+    const fetchStatus = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -34,7 +32,7 @@ const Subscription: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [refreshSubscriptionStatus]);
 
     useEffect(() => {
         fetchStatus();
@@ -47,7 +45,7 @@ const Subscription: React.FC = () => {
                 fetchStatus();
             }, 1000);
         }
-    }, []);
+    }, [fetchStatus]);
 
     const handleStartSubscriptionClick = () => {
         setShowTermsModal(true);
@@ -569,5 +567,3 @@ const Subscription: React.FC = () => {
 };
 
 export default Subscription;
-
-

@@ -8,7 +8,7 @@ import { FaArrowRightLong } from "react-icons/fa6";
 import { useNavigate, useLocation } from "react-router-dom";
 import { UseStateContext } from "../../../context/ContextProvider";
 import { RouteName } from "../../../routes/RouteNames";
-import { Get, Post } from "../../../config/apiMethods";
+import { Post } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config/index";
 
 const Register = () => {
@@ -29,7 +29,7 @@ const Register = () => {
     "Email" | "Pin" | "Password" | "Done"
   >("Email");
   const [showDialog, setShowDialog] = useState<boolean>(false);
-  const [formAnim, setFormAnim] = useState<boolean>(false);
+  const [, setFormAnim] = useState<boolean>(false);
   const [formHeight, setFormHeight] = useState<number | null>(null);
   const formContentRef = useRef<HTMLDivElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -146,7 +146,7 @@ const Register = () => {
           .finally(() => setIsSubmitting(false));
       } else if (screenStatus === "Register") {
         setRole(userRole);
-        if (password != confirmPassword) {
+        if (password !== confirmPassword) {
           displayMessage("password must be same", "error");
           return;
         }
@@ -164,7 +164,7 @@ const Register = () => {
           email,
         };
 
-        if (userRole == "Supervisor") {
+        if (userRole === "Supervisor") {
           // Only set childIds if rollNo is provided (for existing students)
           // This section maintained for Supervisor role - they may still need childIds
           // Additional rollNo variable might be needed for supervisors

@@ -46,7 +46,6 @@ const ClassProgress = () => {
         fetchProgressData();
     }, []);
 
-    const totalSubjects = progressData.completed + progressData.inProgress + progressData.notStarted;
     const pieData = [
         { id: 0, value: progressData.inProgress, label: 'In Progress', color: '#F59E0B' },
         { id: 1, value: progressData.completed, label: 'Completed', color: '#10B981' },

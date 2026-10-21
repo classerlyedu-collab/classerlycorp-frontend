@@ -5,7 +5,7 @@ import { WelcomeStudentImagesArray } from "../../../../constants/employee/Dashbo
 
 const WelcomeNotice = () => {
 
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [, setCurrentImageIndex] = useState(0);
     const getStoredUser = () => {
         try {
             const raw = localStorage.getItem("user");

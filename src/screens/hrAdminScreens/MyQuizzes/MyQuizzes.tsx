@@ -12,7 +12,6 @@ const MyQuizzes = () => {
   const navigate = useNavigate();
   const { loading, allowed } = useSubscriptionStatus();
 
-  const headerArray = ["Subject", "Topic", "Lesson", "Questions", "Score"];
   const [quizzes, setQuizzes] = useState<any[]>([])
   const [searchText, setSearchText] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -32,7 +31,7 @@ const MyQuizzes = () => {
     }
   };
 
-  const user = getStoredUser();
+  const user = useMemo(getStoredUser, []);
 
   useEffect(() => {
     // Only redirect if we've checked and user is not allowed (not while loading)
@@ -68,7 +67,7 @@ const MyQuizzes = () => {
       }
       setIsLoading(false)
     });
-  }, [])
+  }, [user])
 
   const filteredQuizzes = useMemo(() => {
     if (!searchText?.trim()) return quizzes;

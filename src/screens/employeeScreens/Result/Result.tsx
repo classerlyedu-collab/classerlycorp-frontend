@@ -53,7 +53,6 @@ const Result = () => {
         });
     }, []);
 
-    const totalQuizzes = myresult?.totalquizes || 0;
     const successRate = myresult?.successRate || 0;
     const recentSuccessRate = myresult?.recentSuccessRate || 0;
     const totalSubjects = myresult?.totalSubjects || 0;

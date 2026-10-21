@@ -9,7 +9,6 @@ import { RouteName } from '../../../routes/RouteNames';
 // import { RoundedDropDown } from '../../roundedDropDown';
 // import { coursesDropdown } from '../../../constants/parent/myChildren';
 // import { returnMatchingLabel } from '../../../constants/register';
-import { NotificationsModal } from '../NotificationsModal';
 import { AddEmployeeModal } from '../MyChildernModal';
 import { Get, Post } from '../../../config/apiMethods';
 import { displayMessage } from '../../../config';
@@ -19,9 +18,9 @@ const Navbar = ({ title, hideSearchBar, hideTitle, mystd, onEmployeeAdded }: any
     const { showSideBar, setShowSideBar, hasChanges, setIsModalOpen, setHasChanges, user } = UseStateContext();
     const navigate = useNavigate()
     // const [selectedCourse, setSelectedCourse] = useState<number>(0);
-    const [subjects, setSubjects] = useState<any[]>([]);
+    const [, setSubjects] = useState<any[]>([]);
     // const [mystd, setMyStd] = useState<any>({});
-    const [isModalVisible, setModalVisible] = useState(false); // legacy modal (unused after dropdown)
+    const [, setModalVisible] = useState(false);
     const [showNotifDropdown, setShowNotifDropdown] = useState(false); // New dropdown state
     const notifDropdownRef = useRef<HTMLDivElement | null>(null);
     const bellRef = useRef<HTMLDivElement | null>(null);
@@ -123,20 +122,6 @@ const Navbar = ({ title, hideSearchBar, hideTitle, mystd, onEmployeeAdded }: any
         }
     }, [showNotifDropdown]);
 
-    // Helper function to get the correct notification endpoint based on user role
-    const getNotificationEndpoint = () => {
-        switch (user?.userType) {
-            case "HR-Admin":
-                return "/hr-admin/getNotification";
-            case "Employee":
-                return "/employee/getNotification";
-            case "Supervisor":
-                return "/supervisor/getNotification";
-            default:
-                return "/supervisor/getNotification"; // Default fallback
-        }
-    };
-
     useEffect(() => {
         try {
             const raw = localStorage.getItem('user');
@@ -157,7 +142,7 @@ const Navbar = ({ title, hideSearchBar, hideTitle, mystd, onEmployeeAdded }: any
                 }
             }
         })
-    }, []);
+    }, [user.userType]);
     // const [childData, setChildData] = useState<any[]>([]);
     // useEffect(()=>{
     //     navigate(RouteName.MYCHILDREN_SCREEN+`?childern=${selectedCourse}`)
@@ -183,7 +168,7 @@ const Navbar = ({ title, hideSearchBar, hideTitle, mystd, onEmployeeAdded }: any
                     displayMessage(err.message, "error");
                 });
         }
-    }, []);
+    }, [user.userType]);
 
     const isMyChildrenRoute = () => {
         return location.pathname === RouteName?.MYEMPLOYEES_SCREEN;

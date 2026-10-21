@@ -1,7 +1,4 @@
 import { FcManager, FcPodiumWithSpeaker, FcPuzzle, FcReading, FcRules } from "react-icons/fc";
-import { UpcomingEventsTeachers } from "../../components";
-
-
 export const TeacherAnalyticsData = [
     {
         label: 'Total Employees',

@@ -1,11 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
 
-interface JoinCommentRoomData {
-    hrAdminId: string;
-    employeeId: string;
-}
-
 interface NewCommentData {
     hrAdminId: string;
     employeeId: string;

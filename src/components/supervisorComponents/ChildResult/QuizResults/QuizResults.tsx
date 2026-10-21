@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ChildResultType } from "../../../../types/parent/ChildOverview";
-import { getRandomColor } from "../../../../utils/randomColorGenerator";
 import { FaTrophy, FaMedal, FaTimesCircle, FaCheckCircle, FaChartBar, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 interface PropsTypes {
@@ -12,7 +11,6 @@ const QuizResults = ({
 }: PropsTypes) => {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const topicsPerPage = 4; // Show 4 topics per page for quizzes
-    let cusomindex = 1;
 
     // Calculate quiz statistics
     const getQuizStats = () => {

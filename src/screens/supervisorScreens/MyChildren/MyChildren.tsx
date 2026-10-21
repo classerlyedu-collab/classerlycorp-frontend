@@ -1,35 +1,29 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FaUser, FaChevronDown, FaGraduationCap, FaChartLine, FaIdCard, FaCalendarAlt, FaArrowLeft } from "react-icons/fa";
-import { UseStateContext } from "../../../context/ContextProvider";
+import { FaUser, FaGraduationCap, FaChartLine, FaIdCard, FaCalendarAlt, FaArrowLeft } from "react-icons/fa";
 import { RouteName } from "../../../routes/RouteNames";
 import { displayMessage } from "../../../config";
 import { Get } from "../../../config/apiMethods";
 import SideDrawer from "../../../components/sideDrawer/SideDrawer";
 import Navbar from "../../../components/supervisorComponents/Navbar/Navbar";
-import Grades from "../../../components/supervisorComponents/MyChildren/Grades/Grades";
-import TeacherRemarks from "../../../components/supervisorComponents/MyChildren/TeacherRemarks/TeacherRemarks";
 
 const MyEmployees = () => {
     const location = useLocation();
     const navigate = useNavigate();
-
     const searchParams = new URLSearchParams(location.search);
-    const employeeValue = searchParams.get('employee')
+    const employeeValue = searchParams.get("employee");
 
     const [currentState, setCurrentState] = useState<number>(0);
     const [mystd, setMyStd] = useState<any>({})
-    const [per, setPer] = useState<any>('')
     const [employeeData, setEmployeeData] = useState<any[]>([]);
     const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-    const [showEmployeeSelector, setShowEmployeeSelector] = useState<boolean>(false);
+    const [, setShowEmployeeSelector] = useState<boolean>(false);
     const [showEmployeeCards, setShowEmployeeCards] = useState<boolean>(true);
     const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
 
-    let ch: any = localStorage.getItem("myemployee")
-    ch = JSON.parse(ch)
+    const ch = useMemo(() => JSON.parse(localStorage.getItem("myemployee") || "null"), []);
 
-    const fetchEmployeeData = () => {
+    const fetchEmployeeData = useCallback(() => {
         setIsInitialLoading(true);
         // Fetch employee data
         Get("/supervisor/mychilds")
@@ -63,18 +57,19 @@ const MyEmployees = () => {
             .finally(() => {
                 setIsInitialLoading(false);
             });
-    };
+    }, [ch]);
 
     useEffect(() => {
         fetchEmployeeData();
-    }, [])
+    }, [fetchEmployeeData])
 
     useEffect(() => {
-        if (ch) {
-            setMyStd(ch)
-            setSelectedEmployee(ch)
+        const storedEmployee = JSON.parse(localStorage.getItem("myemployee") || "null") || ch;
+        if (storedEmployee) {
+            setMyStd(storedEmployee);
+            setSelectedEmployee(storedEmployee);
         }
-    }, [employeeValue])
+    }, [ch, employeeValue]);
 
     const handleEmployeeSelect = (employee: any) => {
         setSelectedEmployee(employee);

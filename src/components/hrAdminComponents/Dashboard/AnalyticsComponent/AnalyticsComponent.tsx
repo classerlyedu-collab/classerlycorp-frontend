@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import { TeacherAnalyticsData } from "../../../../constants/HRAdmin/Dashboard";
+import { useEffect, useMemo, useState } from "react";
 import { Get } from "../../../../config/apiMethods";
-import { FcManager, FcPodiumWithSpeaker, FcPuzzle, FcReading, FcRules } from "react-icons/fc";
+import { FcManager, FcReading, FcRules } from "react-icons/fc";
 import { PiStudentFill } from "react-icons/pi";
 import { MdOutlineSchool } from "react-icons/md";
 import { RouteName } from "../../../../routes/RouteNames";
@@ -15,7 +14,7 @@ interface AnalyticsComponentProps {
 const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger }) => {
   const navigate = useNavigate();
   const { role } = UseStateContext();
-  const teacherdata = [
+  const teacherdata = useMemo(() => [
     {
       label: 'Total Employees',
       value: 0,
@@ -52,11 +51,10 @@ const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger 
       color: '#EA794A',
       RouteName: RouteName?.MY_QUIZZES
     },
-  ]
+  ], []);
   const [teacher, setTeacher] = useState<any[]>(
     []
   );
-  useEffect(() => { }, [teacher])
   useEffect(() => {
     const endpoint = role === 'Instructor' ? '/hr-admin/instructor/dashboard' : '/hr-admin/dashboard';
     Get(endpoint)
@@ -97,7 +95,7 @@ const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ refreshTrigger 
       .catch((e) => {
         //   displayMessage(e.message);
       });
-  }, [refreshTrigger, role]);
+  }, [refreshTrigger, role, teacherdata]);
   return (
     <div className="w-full h-full">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">

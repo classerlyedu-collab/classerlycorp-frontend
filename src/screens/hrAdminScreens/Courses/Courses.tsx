@@ -6,7 +6,6 @@ import {
   SideDrawer,
   NewCourses,
   Profile,
-  Activities
 } from "../../../components";
 import { Get } from "../../../config/apiMethods";
 import { displayMessage } from "../../../config";

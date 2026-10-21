@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { Get } from "../../../../config/apiMethods";
-import { displayMessage } from "../../../../config";
 
 const TopicDetails = ({ topic, loading }: any) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -60,7 +58,7 @@ const TopicDetails = ({ topic, loading }: any) => {
 
         // Cleanup interval on component unmount
         return () => clearInterval(interval);
-    }, []);
+    }, [topicsSliderData.length]);
 
     const currentTopic = topicsSliderData[currentIndex]; // Get the current topic data
 

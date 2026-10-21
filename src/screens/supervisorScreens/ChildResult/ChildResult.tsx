@@ -1,7 +1,7 @@
-import { Navbar, SideDrawer } from "../../../components";
+import { SideDrawer } from "../../../components";
 import "react-datepicker/dist/react-datepicker.css";
 import { ChildResultType } from "../../../types/parent/ChildOverview";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { LessonStatus, QuizResults } from "../../../components/supervisorComponents/ChildResult";
 import { FaArrowLeft, FaChartBar, FaBookOpen, FaTrophy, FaUser, FaChevronDown } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +9,6 @@ import { RouteName } from "../../../routes/RouteNames";
 
 const ChildResult = () => {
   const [result, setResult] = useState<ChildResultType[] | null>(null);
-  const [title, setTitle] = useState<string>('Result');
   const [childName, setChildName] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'topics' | 'quizzes' | null>(null);
   const navigate = useNavigate();
@@ -18,7 +17,6 @@ const ChildResult = () => {
   useEffect(() => {
     let ch: any = localStorage.getItem('childResult');
     let title: any = localStorage.getItem('resultHeaderTitle');
-    setTitle(title);
     setChildName(title?.replace(' Result', '') || 'Child');
     ch = JSON.parse(ch);
     ch = ch.map((i: any) => {

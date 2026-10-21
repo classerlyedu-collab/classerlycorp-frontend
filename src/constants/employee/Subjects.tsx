@@ -1,6 +1,3 @@
-import { Description } from "@mui/icons-material";
-import { Quizzes } from "../../components";
-
 export const featuredArray = [
     {
         img: 'https://s3-alpha-sig.figma.com/img/627d/2bb5/978e9e9e32b372e2ae4e558cebec038c?Expires=1723420800&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=pMm-5~5L4I51pWdsOGSe44a6WjMcwH89J2q~wFRFn9ZqfxcD4MUSZPYgUAL~9240X3By074~8F8jrOssgaQcCTzD4ibWjrICR2Tq42Zxe~cClm9g4B4EMDhS~TTWZHKIMXQlYwTRIDWDoyWa-hwbXfVlLfHN6H74r9-PfL1ySJGQe8IE36-diQkZQOAlDQxx-EKBKbf~aKDLawX88CsSdfVtFteBwg2r25m9z6Ktz1LMxoJRfZ0NvRzPI11shhBp~SQ33M7VMbLaGEPU0vyrXtdrW59tszYPEg-H2W1Q71SMe1C~IDut3~twIubWI1fpMJpVhkRRvSyd97rWUDT4DA__',

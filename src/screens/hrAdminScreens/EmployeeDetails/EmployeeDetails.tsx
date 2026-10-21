@@ -84,7 +84,7 @@ const EmployeeDetails = () => {
 
   useEffect(() => {
     setStd(location.state);
-  }, []);
+  }, [location.state]);
 
   const fetchExistingFeedback = async () => {
     if (!std?.supervisor?._id || !std?._id) return;
